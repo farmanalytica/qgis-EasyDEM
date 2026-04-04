@@ -24,6 +24,13 @@
 
 import os
 
+try:
+    import ee
+    print("Google Earth Engine API imported successfully.")
+except ImportError:
+    print("Google Earth Engine API not found. Please install it using 'pip install earthengine-api'.")
+
+
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
 
