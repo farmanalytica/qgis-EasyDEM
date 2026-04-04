@@ -24,6 +24,16 @@
 """
 
 
+import os
+import sys
+
+_plugin_dir = os.path.dirname(__file__)
+_extlibs_path = os.path.join(_plugin_dir, 'extlibs')
+
+if os.path.isdir(_extlibs_path) and _extlibs_path not in sys.path:
+    sys.path.insert(0, _extlibs_path)
+
+
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name
     """Load easydem class from file easydem.
