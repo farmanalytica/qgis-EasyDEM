@@ -20,28 +20,52 @@
  ***************************************************************************/
 """
 
-try:
-    import ee
-    print("Google Earth Engine API imported successfully.")
-except ImportError:
-    print("Google Earth Engine API not found. Please install it using 'pip install earthengine-api'.")
-
-from qgis.PyQt.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout
+from qgis.PyQt.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLineEdit, QLabel,
+)
 
 
 class easydemDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._setup_ui()
+        self._connect_signals()
+
+    def _setup_ui(self):
         self.setWindowTitle("EasyDEM")
-        self.resize(400, 300)
+        self.resize(600, 300)
 
-        self.button_box = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-        )
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
+        # --- Auth row ---
+        auth_layout = QHBoxLayout()
 
-        layout = QVBoxLayout()
-        layout.addStretch()
-        layout.addWidget(self.button_box)
-        self.setLayout(layout)
+        self.btn_authenticate = QPushButton("Authenticate on GEE")
+        self.btn_reset_auth = QPushButton("Reset Authentication")
+
+        self.project_id_input = QLineEdit()
+        self.project_id_input.setPlaceholderText("Project ID")
+
+        auth_layout.addWidget(self.btn_authenticate)
+        auth_layout.addWidget(self.btn_reset_auth)
+        auth_layout.addWidget(QLabel("Project ID:"))
+        auth_layout.addWidget(self.project_id_input)
+
+        # --- Main layout ---
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(auth_layout)
+        main_layout.addStretch()
+        self.setLayout(main_layout)
+
+    def _connect_signals(self):
+        self.btn_authenticate.clicked.connect(self.on_authenticate)
+        self.btn_reset_auth.clicked.connect(self.on_reset_authentication)
+
+    # ------------------------------------------------------------------
+    # Handlers — wired to service calls by the plugin controller (easy.py)
+    # ------------------------------------------------------------------
+
+    def on_authenticate(self):
+        pass
+
+    def on_reset_authentication(self):
+        pass
