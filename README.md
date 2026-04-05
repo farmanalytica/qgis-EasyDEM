@@ -63,6 +63,28 @@ Contains `GEEService`. All Earth Engine SDK calls go here. Methods are currently
 
 ---
 
+## For LLMs and AI Agents
+
+If you are an AI assistant working on this codebase, read this before making changes.
+
+**Layer boundaries — never cross these:**
+- The UI (`easy_dialog.py`) must not import `ee` or any service directly.
+- Services (`services/`) must not import Qt widgets or reference QGIS APIs.
+- `easy.py` is the only file allowed to wire UI to services.
+
+**Where things live:**
+- New widgets → `easy_dialog.py` (`_setup_ui`)
+- New signal connections → `easy_dialog.py` (`_connect_signals`)
+- New handler stubs → `easy_dialog.py` (`on_*` methods)
+- New GEE logic → `services/gee_service.py`
+- New unrelated service → new file under `services/`, exported from `services/__init__.py`
+
+**`extlibs/` is read-only** — it is vendored. Never edit files inside it. Never add imports from packages not already present there.
+
+**Stub pattern** — methods are added as `pass` stubs first, wired and implemented separately. Follow this when adding new features.
+
+---
+
 ## Dependencies
 
 Bundled under `extlibs/` so no extra `pip install` is needed in the QGIS environment. The path is injected into `sys.path` by `__init__.py` before any plugin code runs.
