@@ -26,15 +26,13 @@ qgis-EasyDEM/
 The codebase follows a **UI / Service** separation:
 
 ### `easy.py` — Plugin Controller
-The QGIS plugin entry point. Handles toolbar/menu registration (`initGui`), teardown (`unload`), and launches the dialog (`run`). This is the glue between QGIS and the rest of the plugin — it should instantiate services and pass them into the dialog, not contain business logic itself.
+The QGIS plugin entry point. Handles toolbar/menu registration (`initGui`), teardown (`unload`), and launches the dialog (`run`). On first run it instantiates `GEEService` and connects dialog signals to service methods — this is the only place UI and services are wired together.
 
 ### `easy_dialog.py` — UI Layer
-Contains `easydemDialog(QDialog)`. Responsible only for building widgets and emitting signals. It must not import `ee` or call any GEE SDK directly.
+Contains `easydemDialog(QDialog)`. Responsible only for building widgets. It has no knowledge of services or the `ee` SDK — all signal connections are made externally by the controller.
 
 Internal conventions:
 - `_setup_ui()` — constructs and arranges all widgets
-- `_connect_signals()` — wires Qt signals to handler methods
-- `on_*` methods — stub handlers that delegate to a service (currently `pass`)
 
 Current widgets:
 | Widget | Attribute | Purpose |
@@ -44,7 +42,7 @@ Current widgets:
 | QLineEdit | `project_id_input` | User-supplied GCP project ID |
 
 ### `services/gee_service.py` — GEE Service
-Contains `GEEService`. All Earth Engine SDK calls go here. Methods are currently stubs (`pass`) ready to be implemented.
+Contains `GEEService`. Imports `ee` and owns all Earth Engine SDK calls.
 
 | Method | Signature | Purpose |
 |---|---|---|
@@ -55,9 +53,9 @@ Contains `GEEService`. All Earth Engine SDK calls go here. Methods are currently
 
 ## Adding a New Feature
 
-1. **UI changes** — edit `easy_dialog.py`. Add widgets in `_setup_ui`, connect signals in `_connect_signals`, add an `on_*` handler stub.
+1. **UI changes** — edit `easy_dialog.py`. Add widgets in `_setup_ui`.
 2. **Business logic** — add a method to `GEEService` (or create a new service file under `services/`).
-3. **Wire them up** — in `easy.py`, pass the service into the dialog and connect the dialog's handler to the service method.
+3. **Wire them up** — in `easy.py`, connect the new widget's signal to the service method.
 
 > Keep the dialog ignorant of the GEE SDK. Keep the service ignorant of Qt widgets.
 
@@ -74,14 +72,11 @@ If you are an AI assistant working on this codebase, read this before making cha
 
 **Where things live:**
 - New widgets → `easy_dialog.py` (`_setup_ui`)
-- New signal connections → `easy_dialog.py` (`_connect_signals`)
-- New handler stubs → `easy_dialog.py` (`on_*` methods)
+- New signal connections → `easy.py` (inside the `if self.first_start` block in `run()`)
 - New GEE logic → `services/gee_service.py`
 - New unrelated service → new file under `services/`, exported from `services/__init__.py`
 
 **`extlibs/` is read-only** — it is vendored. Never edit files inside it. Never add imports from packages not already present there.
-
-**Stub pattern** — methods are added as `pass` stubs first, wired and implemented separately. Follow this when adding new features.
 
 ---
 
