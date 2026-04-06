@@ -6,10 +6,13 @@ All Earth Engine business logic lives here, keeping the UI layer free
 of SDK-specific details.
 """
 
+import ee
+
 
 class GEEService:
     def authenticate(self, project_id: str):
-        pass
+        print(f"Authenticating with GEE for project: {project_id}")
 
     def reset_authentication(self):
-        pass
+        print("Resetting GEE authentication")
+

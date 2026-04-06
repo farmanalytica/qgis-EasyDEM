@@ -29,6 +29,7 @@ from qgis.PyQt.QtWidgets import QAction
 from .resources import *
 # Import the code for the dialog
 from .easy_dialog import easydemDialog
+from .services.gee_service import GEEService
 import os.path
 
 
@@ -187,7 +188,12 @@ class easydem:
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
+            self.gee_service = GEEService()
             self.dlg = easydemDialog()
+            self.dlg.btn_authenticate.clicked.connect(
+                lambda: self.gee_service.authenticate(self.dlg.project_id_input.text())
+            )
+            self.dlg.btn_reset_auth.clicked.connect(self.gee_service.reset_authentication)
 
         # show the dialog
         self.dlg.show()

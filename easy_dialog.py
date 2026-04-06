@@ -30,11 +30,10 @@ class easydemDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._setup_ui()
-        self._connect_signals()
 
     def _setup_ui(self):
         self.setWindowTitle("EasyDEM")
-        self.resize(600, 300)
+        #self.resize(600, 300)
 
         # --- Auth row ---
         auth_layout = QHBoxLayout()
@@ -56,16 +55,3 @@ class easydemDialog(QDialog):
         main_layout.addStretch()
         self.setLayout(main_layout)
 
-    def _connect_signals(self):
-        self.btn_authenticate.clicked.connect(self.on_authenticate)
-        self.btn_reset_auth.clicked.connect(self.on_reset_authentication)
-
-    # ------------------------------------------------------------------
-    # Handlers — wired to service calls by the plugin controller (easy.py)
-    # ------------------------------------------------------------------
-
-    def on_authenticate(self):
-        pass
-
-    def on_reset_authentication(self):
-        pass
