@@ -9,7 +9,7 @@ A QGIS plugin for DEM (Digital Elevation Model) processing using Google Earth En
 ```
 qgis-EasyDEM/
 ├── __init__.py          # QGIS entry point — registers the plugin via classFactory()
-├── easy.py              # Plugin controller — owns the QGIS lifecycle (init_gui, unload, run)
+├── easy.py              # Plugin controller — owns the QGIS lifecycle (initGui, unload, run)
 ├── easy_dialog.py       # UI layer — dialog window and widget definitions
 ├── resources.py         # Compiled Qt resources (icons, etc.)
 ├── pavement.py          # Build/dev task automation (paver)
@@ -26,7 +26,7 @@ qgis-EasyDEM/
 The codebase follows a **UI / Service** separation:
 
 ### `easy.py` — Plugin Controller
-The QGIS plugin entry point. Handles toolbar/menu registration (`init_gui`), teardown (`unload`), and launches the dialog (`run`). On first run it instantiates `GEEService` and connects dialog signals to service methods — this is the only place UI and services are wired together.
+The QGIS plugin entry point. Handles toolbar/menu registration (`initGui`), teardown (`unload`), and launches the dialog (`run`). On first run it instantiates `GEEService` and connects dialog signals to service methods — this is the only place UI and services are wired together.
 
 ### `easy_dialog.py` — UI Layer
 Contains `EasyDemDialog(QDialog)`. Responsible only for building widgets. It has no knowledge of services or the `ee` SDK — all signal connections are made externally by the controller.
