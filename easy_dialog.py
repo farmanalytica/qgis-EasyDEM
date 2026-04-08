@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 /***************************************************************************
- easydemDialog
+ EasyDemDialog
                                  A QGIS plugin
  DEM
                              -------------------
@@ -21,19 +21,25 @@
 """
 
 from qgis.PyQt.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLineEdit, QLabel,
+    QDialog,
+    QApplication,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLineEdit,
+    QLabel,
+    QMessageBox,
 )
 
 
-class easydemDialog(QDialog):
+class EasyDemDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._setup_ui()
 
     def _setup_ui(self):
         self.setWindowTitle("EasyDEM")
-        #self.resize(600, 300)
+        # self.resize(600, 300)
 
         # --- Auth row ---
         auth_layout = QHBoxLayout()
@@ -55,3 +61,25 @@ class easydemDialog(QDialog):
         main_layout.addStretch()
         self.setLayout(main_layout)
 
+    def pop_warning(self, message):
+        QApplication.restoreOverrideCursor()
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Warning!")
+
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setText(message)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.button(QMessageBox.StandardButton.Ok).setText("OK")
+        msg.setStyleSheet("font-size: 10pt;")
+        msg.exec()
+
+    def pop_message(self, message):
+        QApplication.restoreOverrideCursor()
+        msg = QMessageBox(self)
+
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setText(message)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.button(QMessageBox.StandardButton.Ok).setText("OK")
+        msg.setStyleSheet("font-size: 10pt;")
+        msg.exec()
