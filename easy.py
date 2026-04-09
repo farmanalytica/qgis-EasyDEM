@@ -128,7 +128,7 @@ class EasyDem:
 
         return action
 
-    def init_gui(self):
+    def initGui(self):
         """Initialize the plugin GUI."""
         icon_path = ":/plugins/easy/icon.png"
         self.add_action(
