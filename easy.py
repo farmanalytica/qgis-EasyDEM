@@ -22,6 +22,8 @@
  ***************************************************************************/
 """
 
+import re
+
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
@@ -179,21 +181,27 @@ class EasyDem:
         """
         project_id = self.dlg.project_id_input.text()
         if not project_id:
-            self.dlg.pop_warning("Missing Project ID.")
+            self.dlg.pop_message("Missing Project ID.", "warning")
+            return
+
+        project_id_pattern = r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+
+        if not re.match(project_id_pattern, project_id):
+            self.dlg.pop_message("Invalid Project ID.", "warning")
             return
 
         try:
             self.gee_service.authenticate(project_id)
-            self.dlg.pop_info("Authentication successful!")
+            self.dlg.pop_message("Authentication successful!", "info")
 
         except Exception as e:
-            self.dlg.pop_warning(str(e))
+            self.dlg.pop_message(str(e), "warning")
 
     def handle_reset_authentication(self):
         """Reset Google Earth Engine authentication credentials."""
         try:
             msg = self.gee_service.reset_authentication()
             if msg:
-                self.dlg.pop_info(msg)
+                self.dlg.pop_message(msg, "info")
         except (FileNotFoundError, RuntimeError, OSError) as e:
-            self.dlg.pop_warning(str(e))
+            self.dlg.pop_message(str(e), "warning")

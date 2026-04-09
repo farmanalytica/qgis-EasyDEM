@@ -71,35 +71,19 @@ class EasyDemDialog(QDialog):
         main_layout.addStretch()
         self.setLayout(main_layout)
 
-    def pop_warning(self, message):
-        """
-        Display a warning message dialog.
-
-        Args:
-            message: Warning message text.
-        """
+    def pop_message(self, message, kind):
         QApplication.restoreOverrideCursor()
+
+        config = {
+            "info": ("Information", QMessageBox.Icon.Information),
+            "warning": ("Warning", QMessageBox.Icon.Warning),
+        }
+
+        title, icon = config.get(kind, config["info"])
+
         msg = QMessageBox(self)
-        msg.setWindowTitle("Warning!")
-
-        msg.setIcon(QMessageBox.Icon.Warning)
-        msg.setText(message)
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.button(QMessageBox.StandardButton.Ok).setText("OK")
-        msg.setStyleSheet("font-size: 10pt;")
-        msg.exec()
-
-    def pop_info(self, message):
-        """
-        Display an information message dialog.
-
-        Args:
-            message: Information message text.
-        """
-        QApplication.restoreOverrideCursor()
-        msg = QMessageBox(self)
-
-        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setWindowTitle(title)
+        msg.setIcon(icon)
         msg.setText(message)
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.button(QMessageBox.StandardButton.Ok).setText("OK")
