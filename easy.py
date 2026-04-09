@@ -34,7 +34,19 @@ import os.path
 
 
 class EasyDem:
+    """
+    Main plugin class for EasyDEM QGIS plugin.
+
+    Manages plugin initialization, GUI setup, and authentication workflow.
+    """
+
     def __init__(self, interface):
+        """
+        Initialize EasyDEM plugin.
+
+        Args:
+            interface: QGIS interface instance.
+        """
 
         self.interface = interface
         self.plugin_dir = os.path.dirname(__file__)
@@ -54,7 +66,15 @@ class EasyDem:
         self.first_start = None
 
     def tr(self, message):
+        """
+        Translate a message string.
 
+        Args:
+            message: Message to translate.
+
+        Returns:
+            Translated message string.
+        """
         return QCoreApplication.translate("easydem", message)
 
     def add_action(
@@ -69,6 +89,23 @@ class EasyDem:
         whats_this=None,
         parent=None,
     ):
+        """
+        Add an action to the toolbar and/or menu.
+
+        Args:
+            icon_path: Path to the action icon.
+            text: Action display text.
+            callback: Function to call when action is triggered.
+            enabled_flag: Whether action is enabled initially.
+            add_to_menu: Whether to add action to plugin menu.
+            add_to_toolbar: Whether to add action to toolbar.
+            status_tip: Tooltip text.
+            whats_this: Help text.
+            parent: Parent widget.
+
+        Returns:
+            The created QAction object.
+        """
 
         icon = QIcon(icon_path)
         action = QAction(icon, text, parent)
@@ -92,7 +129,7 @@ class EasyDem:
         return action
 
     def init_gui(self):
-
+        """Initialize the plugin GUI."""
         icon_path = ":/plugins/easy/icon.png"
         self.add_action(
             icon_path,
@@ -104,12 +141,13 @@ class EasyDem:
         self.first_start = True
 
     def unload(self):
+        """Remove the plugin from QGIS."""
         for action in self.actions:
             self.interface.removePluginMenu("&EasyDEM", action)
             self.interface.removeToolBarIcon(action)
 
     def run(self):
-
+        """Display the plugin dialog and handle user interaction."""
         if self.first_start:
             self.first_start = False
             self.gee_service = GEEService()
@@ -133,6 +171,12 @@ class EasyDem:
             pass
 
     def handle_authentication(self):
+        """
+        Handle Google Earth Engine authentication flow.
+
+        Validates project ID and performs authentication, displaying
+        appropriate messages on success or failure.
+        """
         project_id = self.dlg.project_id_input.text()
         if not project_id:
             self.dlg.pop_warning("Missing Project ID.")
@@ -140,15 +184,16 @@ class EasyDem:
 
         try:
             self.gee_service.authenticate(project_id)
-            self.dlg.pop_message("Authentication successful!")
+            self.dlg.pop_info("Authentication successful!")
 
         except Exception as e:
             self.dlg.pop_warning(str(e))
 
     def handle_reset_authentication(self):
+        """Reset Google Earth Engine authentication credentials."""
         try:
             msg = self.gee_service.reset_authentication()
             if msg:
-                self.dlg.pop_message(msg)
+                self.dlg.pop_info(msg)
         except (FileNotFoundError, RuntimeError, OSError) as e:
             self.dlg.pop_warning(str(e))

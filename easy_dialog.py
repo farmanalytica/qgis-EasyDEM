@@ -33,13 +33,23 @@ from qgis.PyQt.QtWidgets import (
 
 
 class EasyDemDialog(QDialog):
+    """
+    Dialog window for EasyDEM plugin user interface.
+    """
+
     def __init__(self, parent=None):
+        """
+        Initialize the EasyDEM dialog.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._setup_ui()
 
     def _setup_ui(self):
+        """Set up the dialog layout and widgets."""
         self.setWindowTitle("EasyDEM")
-        # self.resize(600, 300)
 
         # --- Auth row ---
         auth_layout = QHBoxLayout()
@@ -62,6 +72,12 @@ class EasyDemDialog(QDialog):
         self.setLayout(main_layout)
 
     def pop_warning(self, message):
+        """
+        Display a warning message dialog.
+
+        Args:
+            message: Warning message text.
+        """
         QApplication.restoreOverrideCursor()
         msg = QMessageBox(self)
         msg.setWindowTitle("Warning!")
@@ -73,7 +89,13 @@ class EasyDemDialog(QDialog):
         msg.setStyleSheet("font-size: 10pt;")
         msg.exec()
 
-    def pop_message(self, message):
+    def pop_info(self, message):
+        """
+        Display an information message dialog.
+
+        Args:
+            message: Information message text.
+        """
         QApplication.restoreOverrideCursor()
         msg = QMessageBox(self)
 
