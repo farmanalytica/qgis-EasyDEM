@@ -32,6 +32,7 @@ from .resources import *
 
 from .easy_dialog import EasyDemDialog
 from .services.gee_service import GEEService
+from .services.aoi_service import AOIService
 import os.path
 
 
@@ -167,6 +168,8 @@ class EasyDem:
 
             self.dlg.btn_reset_auth.clicked.connect(self.handle_reset_authentication)
 
+            self.dlg.btn_get_aoi.clicked.connect(self.handle_get_aoi)
+
         self.dlg.show()
         result = self.dlg.exec_()
         if result:
@@ -192,6 +195,7 @@ class EasyDem:
 
         try:
             self.gee_service.authenticate(project_id)
+            self.dlg.show_aoi_page()
             self.dlg.pop_message("Authentication successful!", "info")
 
         except Exception as e:
@@ -204,4 +208,19 @@ class EasyDem:
             if msg:
                 self.dlg.pop_message(msg, "info")
         except (FileNotFoundError, RuntimeError, OSError) as e:
+            self.dlg.pop_message(str(e), "warning")
+
+    def handle_get_aoi(self):
+        """Load the AOI from the selected layer and store it for downstream use."""
+        layer = self.dlg.layer_combo.currentLayer()
+
+        if not layer:
+            self.dlg.pop_message("Select a layer.", "warning")
+            return
+
+        try:
+            self.aoi = AOIService.get_aoi_from_layer(layer)
+            self.dlg.pop_message("AOI loaded successfully.", "info")
+
+        except Exception as e:
             self.dlg.pop_message(str(e), "warning")
