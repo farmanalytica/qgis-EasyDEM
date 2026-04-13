@@ -33,13 +33,23 @@ from qgis.PyQt.QtWidgets import (
 
 
 class EasyDemDialog(QDialog):
+    """
+    Dialog window for EasyDEM plugin user interface.
+    """
+
     def __init__(self, parent=None):
+        """
+        Initialize the EasyDEM dialog.
+
+        Args:
+            parent: Parent widget.
+        """
         super().__init__(parent)
         self._setup_ui()
 
     def _setup_ui(self):
+        """Set up the dialog layout and widgets."""
         self.setWindowTitle("EasyDEM")
-        # self.resize(600, 300)
 
         # --- Auth row ---
         auth_layout = QHBoxLayout()
@@ -61,23 +71,19 @@ class EasyDemDialog(QDialog):
         main_layout.addStretch()
         self.setLayout(main_layout)
 
-    def pop_warning(self, message):
+    def pop_message(self, message, kind):
         QApplication.restoreOverrideCursor()
+
+        config = {
+            "info": ("Information", QMessageBox.Icon.Information),
+            "warning": ("Warning", QMessageBox.Icon.Warning),
+        }
+
+        title, icon = config.get(kind, config["info"])
+
         msg = QMessageBox(self)
-        msg.setWindowTitle("Warning!")
-
-        msg.setIcon(QMessageBox.Icon.Warning)
-        msg.setText(message)
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.button(QMessageBox.StandardButton.Ok).setText("OK")
-        msg.setStyleSheet("font-size: 10pt;")
-        msg.exec()
-
-    def pop_message(self, message):
-        QApplication.restoreOverrideCursor()
-        msg = QMessageBox(self)
-
-        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setWindowTitle(title)
+        msg.setIcon(icon)
         msg.setText(message)
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.button(QMessageBox.StandardButton.Ok).setText("OK")
