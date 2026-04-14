@@ -20,6 +20,9 @@
  ***************************************************************************/
 """
 
+from qgis.gui import QgsMapLayerComboBox
+from qgis.core import QgsMapLayerProxyModel
+
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QApplication,
@@ -29,6 +32,8 @@ from qgis.PyQt.QtWidgets import (
     QLineEdit,
     QLabel,
     QMessageBox,
+    QStackedWidget,
+    QWidget,
 )
 
 
@@ -51,7 +56,28 @@ class EasyDemDialog(QDialog):
         """Set up the dialog layout and widgets."""
         self.setWindowTitle("EasyDEM")
 
-        # --- Auth row ---
+        main_layout = QVBoxLayout(self)
+
+        self.stack = QStackedWidget()
+        main_layout.addWidget(self.stack)
+
+        self.auth_page = QWidget()
+        self.aoi_page = QWidget()
+
+        self._setup_auth_page()
+        self._setup_aoi_page()
+
+        self.stack.addWidget(self.auth_page)
+        self.stack.addWidget(self.aoi_page)
+
+        self.stack.setCurrentWidget(self.auth_page)
+
+        main_layout.addStretch()
+
+    def _setup_auth_page(self):
+        """Set up the authentication page with GEE auth buttons and project ID input."""
+        main_layout = QVBoxLayout(self.auth_page)
+
         auth_layout = QHBoxLayout()
 
         self.btn_authenticate = QPushButton("Authenticate on GEE")
@@ -65,13 +91,35 @@ class EasyDemDialog(QDialog):
         auth_layout.addWidget(QLabel("Project ID:"))
         auth_layout.addWidget(self.project_id_input)
 
-        # --- Main layout ---
-        main_layout = QVBoxLayout()
         main_layout.addLayout(auth_layout)
         main_layout.addStretch()
-        self.setLayout(main_layout)
+
+    def _setup_aoi_page(self):
+        """Set up the AOI page with a polygon layer selector and load button."""
+        layout = QVBoxLayout(self.aoi_page)
+
+        layout.addWidget(QLabel("Select AOI Layer"))
+
+        self.layer_combo = QgsMapLayerComboBox()
+        self.layer_combo.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+
+        self.btn_get_aoi = QPushButton("Load AOI")
+
+        layout.addWidget(self.layer_combo)
+        layout.addWidget(self.btn_get_aoi)
+
+    def show_aoi_page(self):
+        """Switch the stacked widget to the AOI selection page."""
+        self.stack.setCurrentWidget(self.aoi_page)
 
     def pop_message(self, message, kind):
+        """
+        Display a modal message box to the user.
+
+        Args:
+            message: Text content to display.
+            kind: Message type — "info" for informational, "warning" for warnings.
+        """
         QApplication.restoreOverrideCursor()
 
         config = {
@@ -89,3 +137,4 @@ class EasyDemDialog(QDialog):
         msg.button(QMessageBox.StandardButton.Ok).setText("OK")
         msg.setStyleSheet("font-size: 10pt;")
         msg.exec()
+
