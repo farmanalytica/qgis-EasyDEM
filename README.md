@@ -16,7 +16,8 @@ qgis-EasyDEM/
 ├── services/
 │   ├── __init__.py      # Exports service classes
 │   ├── gee_service.py   # Google Earth Engine business logic
-│   └── aoi_service.py   # AOI extraction and conversion to EE objects
+│   ├── aoi_service.py   # AOI extraction and conversion to EE objects
+│   └── dem_service.py   # Service for downloading DEM data from Google Earth Engine
 └── extlibs/             # Vendored third-party dependencies (ee, urllib3, etc.)
 ```
 
@@ -59,6 +60,13 @@ Contains `AOIService`. Extracts geometry from a QGIS layer and converts it to an
 |---|---|---|
 | `get_aoi_from_layer` | `(layer: QgsVectorLayer)` | Returns an EE FeatureCollection from a layer object |
 | `get_aoi_from_layer_id` | `(layer_id: str)` | Same, but looks up the layer by ID from the current project |
+
+### `services/dem_service.py` — DEM Service
+Contains `DEMService`. Extracts geometry from a QGIS layer and converts it to an `ee.FeatureCollection`.
+
+| Method | Signature | Purpose |
+|---|---|---|
+| `download_dem` | `(aoi_feature_collection: FeatureCollection)` | Returns an temporary file name |
 
 ---
 

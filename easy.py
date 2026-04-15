@@ -23,17 +23,31 @@
 """
 
 import re
+import os.path
 
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import (
+    QSettings,
+    QTranslator,
+    QCoreApplication,
+)
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
+from qgis.core import (
+    QgsRasterLayer,
+    QgsColorRampShader,
+    QgsProject,
+    QgsRasterShader,
+    QgsSingleBandPseudoColorRenderer,
+    QgsStyle,
+    QgsLayerTreeLayer,
+)
 
 from .resources import *
 
 from .easy_dialog import EasyDemDialog
 from .services.gee_service import GEEService
 from .services.aoi_service import AOIService
-import os.path
+from .services.dem_service import DEMService
 
 
 class EasyDem:
@@ -212,15 +226,80 @@ class EasyDem:
 
     def handle_get_aoi(self):
         """Load the AOI from the selected layer and store it for downstream use."""
-        layer = self.dlg.layer_combo.currentLayer()
-
-        if not layer:
-            self.dlg.pop_message("Select a layer.", "warning")
-            return
-
         try:
-            self.aoi = AOIService.get_aoi_from_layer(layer)
-            self.dlg.pop_message("AOI loaded successfully.", "info")
+            layer = self.dlg.layer_combo.currentLayer()
+
+            if not layer:
+                self.dlg.pop_message("Select a layer.", "warning")
+                return
+
+            aoi = AOIService.get_aoi_from_layer(layer)
+            dem_path = DEMService.download_dem(aoi)
+
+            self._load_dem_to_qgis(dem_path)
+
+            self.dlg.pop_message("DEM loaded sucessfully", "info")
 
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")
+
+    def _build_color_renderer(
+        self, provider, min_val, max_val
+    ) -> QgsSingleBandPseudoColorRenderer:
+        """Build the color ramp for the layer"""
+        color_ramp = QgsStyle().defaultStyle().colorRamp("Magma")
+        if not color_ramp:
+            raise RuntimeError("Color ramp 'Magma' not found in QGIS style library.")
+
+        num_stops = 5
+        step = (max_val - min_val) / (num_stops - 1)
+        color_ramp_items = [
+            QgsColorRampShader.ColorRampItem(
+                min_val + i * step, color_ramp.color(i / (num_stops - 1))
+            )
+            for i in range(num_stops)
+        ]
+
+        color_ramp_shader = QgsColorRampShader()
+        color_ramp_shader.setColorRampType(QgsColorRampShader.Interpolated)
+        color_ramp_shader.setColorRampItemList(color_ramp_items)
+
+        raster_shader = QgsRasterShader()
+        raster_shader.setRasterShaderFunction(color_ramp_shader)
+
+        renderer = QgsSingleBandPseudoColorRenderer(provider, 1, raster_shader)
+        renderer.setClassificationMin(min_val)
+        renderer.setClassificationMax(max_val)
+        return renderer
+
+    def _load_dem_to_qgis(self, path: str) -> QgsRasterLayer:
+        """
+        Load a DEM GeoTIFF into QGIS with a Magma color ramp renderer.
+
+        Args:
+            path: Absolute path to the GeoTIFF file.
+
+        Returns:
+            The loaded and styled QgsRasterLayer.
+
+        Raises:
+            RuntimeError: If the raster layer is invalid.
+        """
+        raster_layer = QgsRasterLayer(path, "DEM (Copernicus)")
+        if not raster_layer.isValid():
+            raise RuntimeError("Failed to load DEM into QGIS.")
+
+        provider = raster_layer.dataProvider()
+        stats = provider.bandStatistics(1)
+        min_val, max_val = stats.minimumValue, stats.maximumValue
+
+        renderer = self._build_color_renderer(provider, min_val, max_val)
+        raster_layer.setRenderer(renderer)
+
+        QgsProject.instance().addMapLayer(raster_layer, False)
+        QgsProject.instance().layerTreeRoot().insertChildNode(
+            0, QgsLayerTreeLayer(raster_layer)
+        )
+        raster_layer.triggerRepaint()
+
+        return raster_layer
