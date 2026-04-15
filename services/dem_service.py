@@ -40,6 +40,3 @@ class DEMService:
             file.write(response.content)
 
         return temp_file.name
-
-
-# atualizar readme

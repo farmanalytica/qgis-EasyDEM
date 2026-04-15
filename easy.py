@@ -79,6 +79,7 @@ class EasyDem:
 
         self.actions = []
         self.menu = "&EasyDEM"
+        self.current_aoi = None
 
         self.first_start = None
 
@@ -184,6 +185,8 @@ class EasyDem:
 
             self.dlg.btn_get_aoi.clicked.connect(self.handle_get_aoi)
 
+            self.dlg.btn_download_dem.clicked.connect(self.handle_dem_service)
+
         self.dlg.show()
         result = self.dlg.exec_()
         if result:
@@ -233,12 +236,8 @@ class EasyDem:
                 self.dlg.pop_message("Select a layer.", "warning")
                 return
 
-            aoi = AOIService.get_aoi_from_layer(layer)
-            dem_path = DEMService.download_dem(aoi)
-
-            self._load_dem_to_qgis(dem_path)
-
-            self.dlg.pop_message("DEM loaded sucessfully", "info")
+            self.interface.messageBar().pushMessage("Layer selected.")
+            self.current_aoi = AOIService.get_aoi_from_layer(layer)
 
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")
@@ -303,3 +302,9 @@ class EasyDem:
         raster_layer.triggerRepaint()
 
         return raster_layer
+
+    def handle_dem_service(self):
+        dem_path = DEMService.download_dem(self.current_aoi)
+
+        self._load_dem_to_qgis(dem_path)
+        self.interface.messageBar().pushMessage("DEM loaded.")

@@ -105,8 +105,11 @@ class EasyDemDialog(QDialog):
 
         self.btn_get_aoi = QPushButton("Load AOI")
 
+        self.btn_download_dem = QPushButton("Download DEM")
+
         layout.addWidget(self.layer_combo)
         layout.addWidget(self.btn_get_aoi)
+        layout.addWidget(self.btn_download_dem)
 
     def show_aoi_page(self):
         """Switch the stacked widget to the AOI selection page."""
@@ -137,4 +140,3 @@ class EasyDemDialog(QDialog):
         msg.button(QMessageBox.StandardButton.Ok).setText("OK")
         msg.setStyleSheet("font-size: 10pt;")
         msg.exec()
-
