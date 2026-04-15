@@ -15,7 +15,8 @@ qgis-EasyDEM/
 ├── pavement.py          # Build/dev task automation (paver)
 ├── services/
 │   ├── __init__.py      # Exports service classes
-│   └── gee_service.py   # Google Earth Engine business logic
+│   ├── gee_service.py   # Google Earth Engine business logic
+│   └── aoi_service.py   # AOI extraction and conversion to EE objects
 └── extlibs/             # Vendored third-party dependencies (ee, urllib3, etc.)
 ```
 
@@ -35,11 +36,13 @@ Internal conventions:
 - `_setup_ui()` — constructs and arranges all widgets
 
 Current widgets:
-| Widget | Attribute | Purpose |
-|---|---|---|
-| QPushButton | `btn_authenticate` | Triggers GEE authentication |
-| QPushButton | `btn_reset_auth` | Resets existing GEE credentials |
-| QLineEdit | `project_id_input` | User-supplied GCP project ID |
+| Widget | Attribute | Page | Purpose |
+|---|---|---|---|
+| QPushButton | `btn_authenticate` | auth | Triggers GEE authentication |
+| QPushButton | `btn_reset_auth` | auth | Resets existing GEE credentials |
+| QLineEdit | `project_id_input` | auth | User-supplied GCP project ID |
+| QgsMapLayerComboBox | `layer_combo` | aoi | Polygon layer selector for AOI |
+| QPushButton | `btn_get_aoi` | aoi | Loads AOI from the selected layer |
 
 ### `services/gee_service.py` — GEE Service
 Contains `GEEService`. Imports `ee` and owns all Earth Engine SDK calls.
@@ -48,6 +51,14 @@ Contains `GEEService`. Imports `ee` and owns all Earth Engine SDK calls.
 |---|---|---|
 | `authenticate` | `(project_id: str)` | Authenticates with GEE using the given project |
 | `reset_authentication` | `()` | Clears stored GEE credentials |
+
+### `services/aoi_service.py` — AOI Service
+Contains `AOIService`. Extracts geometry from a QGIS layer and converts it to an `ee.FeatureCollection`.
+
+| Method | Signature | Purpose |
+|---|---|---|
+| `get_aoi_from_layer` | `(layer: QgsVectorLayer)` | Returns an EE FeatureCollection from a layer object |
+| `get_aoi_from_layer_id` | `(layer_id: str)` | Same, but looks up the layer by ID from the current project |
 
 ---
 
@@ -74,6 +85,7 @@ If you are an AI assistant working on this codebase, read this before making cha
 - New widgets → `easy_dialog.py` (`_setup_ui`)
 - New signal connections → `easy.py` (inside the `if self.first_start` block in `run()`)
 - New GEE logic → `services/gee_service.py`
+- New AOI/geometry logic → `services/aoi_service.py`
 - New unrelated service → new file under `services/`, exported from `services/__init__.py`
 
 **`extlibs/` is read-only** — it is vendored. Never edit files inside it. Never add imports from packages not already present there.
