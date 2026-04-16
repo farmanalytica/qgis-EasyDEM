@@ -2,3 +2,4 @@ __pycache__/
 *.py[cod]
 extlibs/
 .venv
+resources_rc.py

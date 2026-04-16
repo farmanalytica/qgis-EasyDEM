@@ -183,8 +183,6 @@ class EasyDem:
 
             self.dlg.btn_reset_auth.clicked.connect(self.handle_reset_authentication)
 
-            self.dlg.btn_get_aoi.clicked.connect(self.handle_get_aoi)
-
             self.dlg.btn_download_dem.clicked.connect(self.handle_dem_service)
 
         self.dlg.show()
@@ -236,8 +234,7 @@ class EasyDem:
                 self.dlg.pop_message("Select a layer.", "warning")
                 return
 
-            self.interface.messageBar().pushMessage("Layer selected.")
-            self.current_aoi = AOIService.get_aoi_from_layer(layer)
+            return AOIService.get_aoi_from_layer(layer)
 
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")
@@ -304,7 +301,8 @@ class EasyDem:
         return raster_layer
 
     def handle_dem_service(self):
-        dem_path = DEMService.download_dem(self.current_aoi)
+        aoi = self.handle_get_aoi()
+        dem_path = DEMService.download_dem(aoi)
 
         self._load_dem_to_qgis(dem_path)
         self.interface.messageBar().pushMessage("DEM loaded.")

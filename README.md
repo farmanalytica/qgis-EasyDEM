@@ -43,7 +43,7 @@ Current widgets:
 | QPushButton | `btn_reset_auth` | auth | Resets existing GEE credentials |
 | QLineEdit | `project_id_input` | auth | User-supplied GCP project ID |
 | QgsMapLayerComboBox | `layer_combo` | aoi | Polygon layer selector for AOI |
-| QPushButton | `btn_get_aoi` | aoi | Loads AOI from the selected layer |
+| QPushButton | `btn_download_dem` | aoi | Loads AOI from the selected layer and DEM layer |
 
 ### `services/gee_service.py` — GEE Service
 Contains `GEEService`. Imports `ee` and owns all Earth Engine SDK calls.

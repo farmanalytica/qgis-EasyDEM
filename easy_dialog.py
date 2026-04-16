@@ -103,12 +103,9 @@ class EasyDemDialog(QDialog):
         self.layer_combo = QgsMapLayerComboBox()
         self.layer_combo.setFilters(QgsMapLayerProxyModel.PolygonLayer)
 
-        self.btn_get_aoi = QPushButton("Load AOI")
-
         self.btn_download_dem = QPushButton("Download DEM")
 
         layout.addWidget(self.layer_combo)
-        layout.addWidget(self.btn_get_aoi)
         layout.addWidget(self.btn_download_dem)
 
     def show_aoi_page(self):
