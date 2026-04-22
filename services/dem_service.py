@@ -1,14 +1,15 @@
 import tempfile
-
 import ee
 import requests
+
+from .dem_registry import DEMRegistry
 
 
 class DEMService:
     """Service for downloading DEM data from Google Earth Engine."""
 
     @staticmethod
-    def download_dem(aoi_feature_collection):
+    def download_dem(aoi_feature_collection, dataset_key):
         """
         Download a Copernicus GLO-30 DEM clipped to the given AOI and save it as a GeoTIFF.
 
@@ -19,13 +20,10 @@ class DEMService:
             Absolute path to the downloaded GeoTIFF file.
         """
         geometry = aoi_feature_collection.geometry()
+        print(dataset_key, "att")
+        registry = DEMRegistry()
+        dem = registry.get_image(dataset_key)
 
-        dem = (
-            ee.ImageCollection("COPERNICUS/DEM/GLO30")
-            .select("DEM")
-            .mosaic()
-            .clip(geometry)
-        )
         final_image = dem.toFloat()
         mask = ee.Image(1).clip(geometry).mask()
         final_image_masked = final_image.updateMask(mask)

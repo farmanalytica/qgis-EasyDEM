@@ -34,6 +34,7 @@ from qgis.PyQt.QtWidgets import (
     QMessageBox,
     QStackedWidget,
     QWidget,
+    QComboBox,
 )
 
 
@@ -104,8 +105,10 @@ class EasyDemDialog(QDialog):
         self.layer_combo.setFilters(QgsMapLayerProxyModel.PolygonLayer)
 
         self.btn_download_dem = QPushButton("Download DEM")
+        self.dem_combo = QComboBox()
 
         layout.addWidget(self.layer_combo)
+        layout.addWidget(self.dem_combo)
         layout.addWidget(self.btn_download_dem)
 
     def show_aoi_page(self):
