@@ -44,6 +44,7 @@ from .resources import *
 from .easy_dialog import EasyDemDialog
 from .dem_handler import DEMHandler
 from .services.gee_service import GEEService
+from .services.dem_registry import DEMRegistry
 
 
 class EasyDem:
@@ -181,6 +182,8 @@ class EasyDem:
                 self.dem_handler.handle_layer_changed
             )
 
+            self.dlg.dem_combo.currentIndexChanged.connect(self._on_dataset_changed)
+
         self.dlg.show()
         result = self.dlg.exec_()
         if result:
@@ -224,3 +227,15 @@ class EasyDem:
                 self.dlg.pop_message(msg, "info")
         except (FileNotFoundError, RuntimeError, OSError) as e:
             self.dlg.pop_message(str(e), "warning")
+
+    def _on_dataset_changed(self):
+        """Loads new dataset info when dataset is changed"""
+        dataset_name = self.dlg.dem_combo.currentData()
+        if not dataset_name:
+            self.dlg.dem_info.clear()
+            return
+
+        registry = DEMRegistry()
+        dataset = registry.get_dataset(dataset_name)
+
+        self.dlg.dem_info.setHtml(dataset.info)

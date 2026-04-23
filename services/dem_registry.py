@@ -54,6 +54,7 @@ class DEMDataset:
         self.is_global = kwargs["is_global"]
         self.is_collection = kwargs["is_collection"]
         self.coverage_bbox = kwargs.get("coverage_bbox")
+        self.info = kwargs["info"]
 
     def get_image(self) -> ee.Image:
         """

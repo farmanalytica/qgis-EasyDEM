@@ -48,6 +48,7 @@ Current widgets:
 | QLineEdit | `project_id_input` | auth | User-supplied GCP project ID |
 | QgsMapLayerComboBox | `layer_combo` | aoi | Polygon layer selector for AOI |
 | QComboBox | `dem_combo` | aoi | Lists DEM datasets available for the selected AOI |
+| QTextBrowser | `dem_info` | aoi | Shows selected DEM dataset info |
 | QPushButton | `btn_download_dem` | aoi | Downloads and loads the selected DEM into QGIS |
 
 ### `dem_handler.py` — DEM Handler
