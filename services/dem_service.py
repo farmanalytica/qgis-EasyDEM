@@ -9,20 +9,20 @@ class DEMService:
     """Service for downloading DEM data from Google Earth Engine."""
 
     @staticmethod
-    def download_dem(aoi_feature_collection, dataset_key):
+    def download_dem(aoi_feature_collection, dataset_name):
         """
-        Download a Copernicus GLO-30 DEM clipped to the given AOI and save it as a GeoTIFF.
+        Download a DEM clipped to the given AOI and save it as a GeoTIFF.
 
         Args:
             aoi_feature_collection: Earth Engine FeatureCollection defining the area of interest.
+            dataset_name: Name of the DEM dataset as registered in the catalog.
 
         Returns:
             Absolute path to the downloaded GeoTIFF file.
         """
         geometry = aoi_feature_collection.geometry()
-        print(dataset_key, "att")
         registry = DEMRegistry()
-        dem = registry.get_image(dataset_key)
+        dem = registry.get_image(dataset_name)
 
         final_image = dem.toFloat()
         mask = ee.Image(1).clip(geometry).mask()

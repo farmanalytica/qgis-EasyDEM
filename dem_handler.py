@@ -57,11 +57,11 @@ class DEMHandler:
         Args:
             interface: The QGIS interface instance for message bar.
         """
-        dataset_key = self.dlg.dem_combo.currentData()
+        dataset_name = self.dlg.dem_combo.currentData()
 
-        dem_path = DEMService.download_dem(self.current_aoi, dataset_key)
+        dem_path = DEMService.download_dem(self.current_aoi, dataset_name)
 
-        self._load_dem_to_qgis(dem_path)
+        self._load_dem_to_qgis(dem_path, dataset_name)
         interface.messageBar().pushMessage("DEM loaded.")
 
     def handle_layer_changed(self, layer):
@@ -93,8 +93,8 @@ class DEMHandler:
         geometry = self.current_aoi.geometry()
 
         for dataset in registry.list_datasets():
-            if registry.is_available(dataset.key, geometry):
-                self.dlg.dem_combo.addItem(dataset.name, dataset.key)
+            if registry.is_available(dataset.name, geometry):
+                self.dlg.dem_combo.addItem(dataset.name, dataset.name)
 
     def _build_color_renderer(
         self, provider, min_val, max_val
@@ -138,7 +138,7 @@ class DEMHandler:
         renderer.setClassificationMax(max_val)
         return renderer
 
-    def _load_dem_to_qgis(self, path: str) -> QgsRasterLayer:
+    def _load_dem_to_qgis(self, path: str, dataset_name: str) -> QgsRasterLayer:
         """
         Load a DEM GeoTIFF into QGIS with a Magma color ramp renderer.
 
@@ -151,7 +151,7 @@ class DEMHandler:
         Raises:
             RuntimeError: If the raster layer is invalid.
         """
-        raster_layer = QgsRasterLayer(path, "DEM (Copernicus)")
+        raster_layer = QgsRasterLayer(path, dataset_name)
         if not raster_layer.isValid():
             raise RuntimeError("Failed to load DEM into QGIS.")
 

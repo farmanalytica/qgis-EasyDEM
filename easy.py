@@ -22,6 +22,10 @@
  ***************************************************************************/
 """
 
+# cursor de carregamento
+# otimizar tempo de carregamento
+# verificar carregamento de áreas (gee learning)
+
 import re
 import os.path
 
