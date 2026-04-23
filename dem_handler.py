@@ -16,6 +16,9 @@ from qgis.core import (
     QgsLayerTreeLayer,
 )
 
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import Qt
+
 from .services.aoi_service import AOIService
 from .services.dem_service import DEMService
 from .services.dem_registry import DEMRegistry
@@ -59,10 +62,15 @@ class DEMHandler:
         """
         dataset_name = self.dlg.dem_combo.currentData()
 
-        dem_path = DEMService.download_dem(self.current_aoi, dataset_name)
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.processEvents()
 
-        self._load_dem_to_qgis(dem_path, dataset_name)
-        interface.messageBar().pushMessage("DEM loaded.")
+        try:
+            dem_path = DEMService.download_dem(self.current_aoi, dataset_name)
+            self._load_dem_to_qgis(dem_path, dataset_name)
+            interface.messageBar().pushMessage("DEM loaded.")
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def handle_layer_changed(self, layer):
         """
@@ -90,11 +98,18 @@ class DEMHandler:
         if not self.current_aoi:
             return
 
-        geometry = self.current_aoi.geometry()
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.processEvents()
 
-        for dataset in registry.list_datasets():
-            if registry.is_available(dataset.name, geometry):
-                self.dlg.dem_combo.addItem(dataset.name, dataset.name)
+        try:
+            geometry = self.current_aoi.geometry()
+
+            for dataset in registry.list_datasets():
+                QApplication.processEvents()
+                if registry.is_available(dataset.name, geometry):
+                    self.dlg.dem_combo.addItem(dataset.name, dataset.name)
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def _build_color_renderer(
         self, provider, min_val, max_val
