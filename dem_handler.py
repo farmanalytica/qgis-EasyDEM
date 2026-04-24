@@ -18,7 +18,7 @@ from qgis.core import (
 )
 
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 from .services.aoi_service import AOIService
 from .services.dem_service import DEMService
@@ -39,6 +39,10 @@ class DEMHandler:
         self.interface = interface
         self.current_aoi = None
         self.current_aoi_bbox = None
+        self._pending_layer = None
+        self._debounce_timer = QTimer()
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.timeout.connect(self._load_aoi_for_pending_layer)
 
     def handle_get_aoi(self):
         """Load the AOI from the selected layer and store it for downstream use."""
@@ -85,23 +89,35 @@ class DEMHandler:
         Args:
             layer: The newly selected layer.
         """
-        if layer:
-            canvas = self.interface.mapCanvas()
-            transform = QgsCoordinateTransform(
-                layer.crs(),
-                canvas.mapSettings().destinationCrs(),
-                QgsProject.instance(),
-            )
-            extent = transform.transformBoundingBox(layer.extent())
-            extent.scale(1.8)
-            canvas.setExtent(extent)
-            canvas.refresh()
+        if not layer:
+            self._debounce_timer.stop()
+            self.current_aoi = None
+            self.current_aoi_bbox = None
+            self.dlg.dem_combo.clear()
+            return
 
+        canvas = self.interface.mapCanvas()
+        transform = QgsCoordinateTransform(
+            layer.crs(),
+            canvas.mapSettings().destinationCrs(),
+            QgsProject.instance(),
+        )
+        extent = transform.transformBoundingBox(layer.extent())
+        extent.scale(1.8)
+        canvas.setExtent(extent)
+        canvas.refresh()
+
+        self._pending_layer = layer
+        self._debounce_timer.start(300)
+
+    def _load_aoi_for_pending_layer(self):
+        """Load AOI and available datasets for the debounced pending layer."""
+        layer = self._pending_layer
+        if not layer:
+            return
         try:
             self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(layer)
-
             self.load_available_datasets()
-
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")
 
