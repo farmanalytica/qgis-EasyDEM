@@ -23,6 +23,8 @@
 from qgis.gui import QgsMapLayerComboBox
 from qgis.core import QgsMapLayerProxyModel
 
+from qgis.PyQt.QtCore import Qt
+
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QApplication,
@@ -52,6 +54,7 @@ class EasyDemDialog(QDialog):
             parent: Parent widget.
         """
         super().__init__(parent)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
         self._setup_ui()
 
     def _setup_ui(self):
