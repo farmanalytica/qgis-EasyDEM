@@ -52,11 +52,11 @@ Current widgets:
 | QPushButton | `btn_download_dem` | aoi | Downloads and loads the selected DEM into QGIS |
 
 ### `dem_handler.py` — DEM Handler
-Contains `DEMHandler`. Bridges dialog events to the DEM services and owns the QGIS rendering pipeline. It holds the current AOI state and coordinates calls between `AOIService`, `DEMRegistry`, and `DEMService`.
+Contains `DEMHandler`. Bridges dialog events to the DEM services and owns the QGIS rendering pipeline. It holds the current AOI state and coordinates calls between `AOIService`, `DEMRegistry`, and `DEMService`. Requires the QGIS `interface` (`iface`) at construction for map canvas access.
 
 | Method | Signature | Purpose |
 |---|---|---|
-| `handle_layer_changed` | `(layer)` | Updates the stored AOI and refreshes the dataset combobox when the layer selection changes |
+| `handle_layer_changed` | `(layer)` | Zooms the map canvas to the selected layer, then updates the stored AOI and refreshes the dataset combobox |
 | `load_available_datasets` | `()` | Queries `DEMRegistry` for datasets available in the current AOI and populates `dem_combo` |
 | `handle_dem_service` | `(interface)` | Downloads the selected DEM and loads it into QGIS with a Magma color ramp |
 

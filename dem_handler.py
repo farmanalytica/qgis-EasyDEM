@@ -14,6 +14,7 @@ from qgis.core import (
     QgsSingleBandPseudoColorRenderer,
     QgsStyle,
     QgsLayerTreeLayer,
+    QgsCoordinateTransform,
 )
 
 from PyQt5.QtWidgets import QApplication
@@ -32,9 +33,10 @@ class DEMHandler:
     visualization of raster data with color ramps.
     """
 
-    def __init__(self, dialog, gee_service):
+    def __init__(self, dialog, gee_service, interface):
         self.dlg = dialog
         self.gee_service = gee_service
+        self.interface = interface
         self.current_aoi = None
         self.current_aoi_bbox = None
 
@@ -77,11 +79,24 @@ class DEMHandler:
         """
         Handle layer selection changes.
 
-        Uploads the current AOI and loads the available datasets of that region.
+        Zooms the map canvas to the selected layer, then uploads the current
+        AOI and loads the available datasets of that region.
 
         Args:
             layer: The newly selected layer.
         """
+        if layer:
+            canvas = self.interface.mapCanvas()
+            transform = QgsCoordinateTransform(
+                layer.crs(),
+                canvas.mapSettings().destinationCrs(),
+                QgsProject.instance(),
+            )
+            extent = transform.transformBoundingBox(layer.extent())
+            extent.scale(1.8)
+            canvas.setExtent(extent)
+            canvas.refresh()
+
         try:
             self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(layer)
 
