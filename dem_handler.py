@@ -89,7 +89,7 @@ class DEMHandler:
         Args:
             layer: The newly selected layer.
         """
-        if not layer:
+        if not layer or not layer.isValid():
             self._debounce_timer.stop()
             self.current_aoi = None
             self.current_aoi_bbox = None
@@ -113,7 +113,10 @@ class DEMHandler:
     def _load_aoi_for_pending_layer(self):
         """Load AOI and available datasets for the debounced pending layer."""
         layer = self._pending_layer
-        if not layer:
+        if not layer or not layer.isValid():
+            self.current_aoi = None
+            self.current_aoi_bbox = None
+            self.dlg.dem_combo.clear()
             return
         try:
             self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(layer)
