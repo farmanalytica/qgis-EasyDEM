@@ -54,7 +54,6 @@ class EasyDemDialog(QDialog):
             parent: Parent widget.
         """
         super().__init__(parent)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
         self._setup_ui()
 
     def _setup_ui(self):
@@ -121,7 +120,9 @@ class EasyDemDialog(QDialog):
         layout.addWidget(self.btn_download_dem)
 
     def show_aoi_page(self):
-        """Switch the stacked widget to the AOI selection page."""
+        """Switch the stacked widget to the AOI selection page and pin dialog on top."""
+        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        self.show()
         self.stack.setCurrentWidget(self.aoi_page)
 
     def pop_message(self, message, kind):
