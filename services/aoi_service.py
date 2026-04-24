@@ -109,7 +109,8 @@ class AOIService:
             layer: QgsVectorLayer to convert.
 
         Returns:
-            ee.FeatureCollection containing the layer's AOI geometry.
+            Tuple of (ee.FeatureCollection, (min_x, min_y, max_x, max_y)) where
+            bbox is in EPSG:4326, computed locally from the QGIS geometry.
 
         Raises:
             ValueError: If the geometry is empty or cannot be exported to GeoJSON.
@@ -130,6 +131,9 @@ class AOIService:
             )
             geometry.transform(transform)
 
+        rect = geometry.boundingBox()
+        bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
+
         geojson_str = geometry.asJson()
         if not geojson_str:
             raise ValueError(
@@ -141,7 +145,7 @@ class AOIService:
         geojson["coordinates"] = _strip_z(geojson["coordinates"])
 
         ee_geometry = ee.Geometry(geojson)
-        return ee.FeatureCollection([ee.Feature(ee_geometry)])
+        return ee.FeatureCollection([ee.Feature(ee_geometry)]), bbox
 
     @staticmethod
     def get_aoi_from_layer(layer):
@@ -152,7 +156,7 @@ class AOIService:
             layer: QgsVectorLayer to use as AOI source.
 
         Returns:
-            ee.FeatureCollection representing the AOI.
+            Tuple of (ee.FeatureCollection, (min_x, min_y, max_x, max_y)).
 
         Raises:
             ValueError: If the layer or its geometry is invalid.
@@ -169,7 +173,7 @@ class AOIService:
             layer_id: String ID of the map layer in the current QGIS project.
 
         Returns:
-            ee.FeatureCollection representing the AOI.
+            Tuple of (ee.FeatureCollection, (min_x, min_y, max_x, max_y)).
 
         Raises:
             ValueError: If the layer does not exist or its geometry is invalid.

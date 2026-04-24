@@ -121,7 +121,7 @@ class DEMRegistry:
         """
         return self.get_dataset(name).get_image()
 
-    def is_available(self, name: str, region) -> bool:
+    def is_available(self, name: str, region, aoi_bbox=None) -> bool:
         """
         Check whether a dataset has coverage over the given region in Earth Engine.
 
@@ -130,13 +130,18 @@ class DEMRegistry:
         Args:
             name: Dataset name as defined in the catalog.
             region: An ee.Geometry or object with a .geometry() method.
+            aoi_bbox: Optional pre-computed (min_x, min_y, max_x, max_y) in EPSG:4326.
+                      When provided, skips the remote GEE bounds call.
 
         Returns:
             True if the dataset covers the region, False otherwise.
         """
         dataset = self.get_dataset(name)
 
-        geom, aoi_bbox = geometry_bounds(region)
+        if aoi_bbox is None:
+            geom, aoi_bbox = geometry_bounds(region)
+        else:
+            geom = region if isinstance(region, ee.Geometry) else region.geometry()
 
         if dataset.coverage_bbox:
             if not bbox_intersects(dataset.coverage_bbox, aoi_bbox):

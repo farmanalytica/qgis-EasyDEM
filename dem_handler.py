@@ -36,6 +36,7 @@ class DEMHandler:
         self.dlg = dialog
         self.gee_service = gee_service
         self.current_aoi = None
+        self.current_aoi_bbox = None
 
     def handle_get_aoi(self):
         """Load the AOI from the selected layer and store it for downstream use."""
@@ -46,7 +47,7 @@ class DEMHandler:
                 self.dlg.pop_message("Select a layer.", "warning")
                 return
 
-            self.current_aoi = AOIService.get_aoi_from_layer(layer)
+            self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(layer)
 
             self.load_available_datasets()
 
@@ -82,7 +83,7 @@ class DEMHandler:
             layer: The newly selected layer.
         """
         try:
-            self.current_aoi = AOIService.get_aoi_from_layer(layer)
+            self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(layer)
 
             self.load_available_datasets()
 
@@ -106,7 +107,7 @@ class DEMHandler:
 
             for dataset in registry.list_datasets():
                 QApplication.processEvents()
-                if registry.is_available(dataset.name, geometry):
+                if registry.is_available(dataset.name, geometry, aoi_bbox=self.current_aoi_bbox):
                     self.dlg.dem_combo.addItem(dataset.name, dataset.name)
         finally:
             QApplication.restoreOverrideCursor()

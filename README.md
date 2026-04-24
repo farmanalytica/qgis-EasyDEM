@@ -73,7 +73,7 @@ Contains `AOIService`. Extracts geometry from a QGIS layer and converts it to an
 
 | Method | Signature | Purpose |
 |---|---|---|
-| `get_aoi_from_layer` | `(layer: QgsVectorLayer)` | Returns an EE FeatureCollection from a layer object |
+| `get_aoi_from_layer` | `(layer: QgsVectorLayer)` | Returns `(ee.FeatureCollection, bbox)` from a layer object; bbox is `(min_x, min_y, max_x, max_y)` in EPSG:4326, computed locally from the QGIS geometry |
 | `get_aoi_from_layer_id` | `(layer_id: str)` | Same, but looks up the layer by ID from the current project |
 
 ### `services/dem_service.py` — DEM Service
@@ -91,7 +91,7 @@ Contains `DEMDataset` and `DEMRegistry`. Loads dataset definitions from `assets/
 | `list_datasets` | `()` | Returns all registered `DEMDataset` objects |
 | `get_dataset` | `(name: str)` | Returns the `DEMDataset` for the given name |
 | `get_image` | `(name: str)` | Returns the `ee.Image` for the given dataset |
-| `is_available` | `(name: str, region)` | Checks whether the dataset has EE coverage over the given geometry |
+| `is_available` | `(name: str, region, aoi_bbox=None)` | Checks whether the dataset has EE coverage over the given geometry; pass pre-computed `aoi_bbox` to skip the remote GEE bounds call |
 
 ---
 
