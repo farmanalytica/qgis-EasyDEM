@@ -159,7 +159,7 @@ class EasyDem:
         if self.first_start:
             self.first_start = False
             self.gee_service = GEEService()
-            self.dlg = EasyDemDialog()
+            self.dlg = EasyDemDialog(self.interface.mainWindow())
             self.dem_handler = DEMHandler(self.dlg, self.gee_service, self.interface)
 
             saved_project_id = self.gee_service.get_saved_project_id()
