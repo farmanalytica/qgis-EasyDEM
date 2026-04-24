@@ -22,32 +22,29 @@
  ***************************************************************************/
 """
 
+# cursor de carregamento
+# otimizar tempo de carregamento
+# verificar carregamento de áreas (gee learning)
+
 import re
 import os.path
 
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtCore import (
     QSettings,
     QTranslator,
     QCoreApplication,
 )
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
 from qgis.core import (
-    QgsRasterLayer,
-    QgsColorRampShader,
     QgsProject,
-    QgsRasterShader,
-    QgsSingleBandPseudoColorRenderer,
-    QgsStyle,
-    QgsLayerTreeLayer,
 )
 
 from .resources import *
-
 from .easy_dialog import EasyDemDialog
+from .dem_handler import DEMHandler
 from .services.gee_service import GEEService
-from .services.aoi_service import AOIService
-from .services.dem_service import DEMService
+from .services.dem_registry import DEMRegistry
 
 
 class EasyDem:
@@ -58,12 +55,6 @@ class EasyDem:
     """
 
     def __init__(self, interface):
-        """
-        Initialize EasyDEM plugin.
-
-        Args:
-            interface: QGIS interface instance.
-        """
 
         self.interface = interface
         self.plugin_dir = os.path.dirname(__file__)
@@ -79,7 +70,6 @@ class EasyDem:
 
         self.actions = []
         self.menu = "&EasyDEM"
-        self.current_aoi = None
 
         self.first_start = None
 
@@ -170,6 +160,7 @@ class EasyDem:
             self.first_start = False
             self.gee_service = GEEService()
             self.dlg = EasyDemDialog()
+            self.dem_handler = DEMHandler(self.dlg, self.gee_service)
 
             saved_project_id = self.gee_service.get_saved_project_id()
             if saved_project_id:
@@ -183,9 +174,15 @@ class EasyDem:
 
             self.dlg.btn_reset_auth.clicked.connect(self.handle_reset_authentication)
 
-            self.dlg.btn_get_aoi.clicked.connect(self.handle_get_aoi)
+            self.dlg.btn_download_dem.clicked.connect(
+                lambda: self.dem_handler.handle_dem_service(self.interface)
+            )
 
-            self.dlg.btn_download_dem.clicked.connect(self.handle_dem_service)
+            self.dlg.layer_combo.layerChanged.connect(
+                self.dem_handler.handle_layer_changed
+            )
+
+            self.dlg.dem_combo.currentIndexChanged.connect(self._on_dataset_changed)
 
         self.dlg.show()
         result = self.dlg.exec_()
@@ -215,6 +212,10 @@ class EasyDem:
             self.dlg.show_aoi_page()
             self.dlg.pop_message("Authentication successful!", "info")
 
+            layer = self.dlg.layer_combo.currentLayer()
+            if layer:
+                self.dem_handler.handle_layer_changed(layer)
+
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")
 
@@ -227,84 +228,14 @@ class EasyDem:
         except (FileNotFoundError, RuntimeError, OSError) as e:
             self.dlg.pop_message(str(e), "warning")
 
-    def handle_get_aoi(self):
-        """Load the AOI from the selected layer and store it for downstream use."""
-        try:
-            layer = self.dlg.layer_combo.currentLayer()
+    def _on_dataset_changed(self):
+        """Loads new dataset info when dataset is changed"""
+        dataset_name = self.dlg.dem_combo.currentData()
+        if not dataset_name:
+            self.dlg.dem_info.clear()
+            return
 
-            if not layer:
-                self.dlg.pop_message("Select a layer.", "warning")
-                return
+        registry = DEMRegistry()
+        dataset = registry.get_dataset(dataset_name)
 
-            self.interface.messageBar().pushMessage("Layer selected.")
-            self.current_aoi = AOIService.get_aoi_from_layer(layer)
-
-        except Exception as e:
-            self.dlg.pop_message(str(e), "warning")
-
-    def _build_color_renderer(
-        self, provider, min_val, max_val
-    ) -> QgsSingleBandPseudoColorRenderer:
-        """Build the color ramp for the layer"""
-        color_ramp = QgsStyle().defaultStyle().colorRamp("Magma")
-        if not color_ramp:
-            raise RuntimeError("Color ramp 'Magma' not found in QGIS style library.")
-
-        num_stops = 5
-        step = (max_val - min_val) / (num_stops - 1)
-        color_ramp_items = [
-            QgsColorRampShader.ColorRampItem(
-                min_val + i * step, color_ramp.color(i / (num_stops - 1))
-            )
-            for i in range(num_stops)
-        ]
-
-        color_ramp_shader = QgsColorRampShader()
-        color_ramp_shader.setColorRampType(QgsColorRampShader.Interpolated)
-        color_ramp_shader.setColorRampItemList(color_ramp_items)
-
-        raster_shader = QgsRasterShader()
-        raster_shader.setRasterShaderFunction(color_ramp_shader)
-
-        renderer = QgsSingleBandPseudoColorRenderer(provider, 1, raster_shader)
-        renderer.setClassificationMin(min_val)
-        renderer.setClassificationMax(max_val)
-        return renderer
-
-    def _load_dem_to_qgis(self, path: str) -> QgsRasterLayer:
-        """
-        Load a DEM GeoTIFF into QGIS with a Magma color ramp renderer.
-
-        Args:
-            path: Absolute path to the GeoTIFF file.
-
-        Returns:
-            The loaded and styled QgsRasterLayer.
-
-        Raises:
-            RuntimeError: If the raster layer is invalid.
-        """
-        raster_layer = QgsRasterLayer(path, "DEM (Copernicus)")
-        if not raster_layer.isValid():
-            raise RuntimeError("Failed to load DEM into QGIS.")
-
-        provider = raster_layer.dataProvider()
-        stats = provider.bandStatistics(1)
-        min_val, max_val = stats.minimumValue, stats.maximumValue
-
-        renderer = self._build_color_renderer(provider, min_val, max_val)
-        raster_layer.setRenderer(renderer)
-
-        QgsProject.instance().addMapLayer(raster_layer, False)
-        QgsProject.instance().layerTreeRoot().insertChildNode(
-            0, QgsLayerTreeLayer(raster_layer)
-        )
-        raster_layer.triggerRepaint()
-
-        return raster_layer
-
-    def handle_dem_service(self):
-        dem_path = DEMService.download_dem(self.current_aoi)
-
-        self._load_dem_to_qgis(dem_path)
-        self.interface.messageBar().pushMessage("DEM loaded.")
+        self.dlg.dem_info.setHtml(dataset.info)
