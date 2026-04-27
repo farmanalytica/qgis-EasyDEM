@@ -1,10 +1,20 @@
 # -*- coding: utf-8 -*-
 """
+UI layer for the EasyDEM QGIS plugin.
+
+Defines ``EasyDemDialog``, a two-page modal dialog that guides the user
+through the full plugin workflow:
+
+1. **Authentication page** (``auth_page``) — user supplies a Google Cloud
+   project ID and validates GEE access.
+2. **AOI page** (``aoi_page``) — user selects a polygon layer as the Area
+   of Interest, picks a DEM dataset, and triggers the download.
+
+All widget construction is handled here.  Signal connections (wiring buttons
+to service calls) are made externally by ``easy.py`` to keep this module
+free of business logic and the ``ee`` SDK.
+
 /***************************************************************************
- EasyDemDialog
-                                 A QGIS plugin
- DEM
-                             -------------------
         begin                : 2026-04-22
         copyright            : (C) 2026 by FARM Analytica
         email                : leandro.eloi@farmanalytica.com.br
@@ -106,9 +116,41 @@ QPushButton:disabled {
 # ---------------------------------------------------------------------------
 
 class EasyDemDialog(QDialog):
-    """Dialog window for EasyDEM plugin user interface."""
+    """
+    Main dialog window for the EasyDEM plugin.
+
+    Presents a two-page ``QStackedWidget`` flow:
+
+    - ``auth_page`` — shown on first open; collects the GCP project ID and
+      validates Google Earth Engine credentials.
+    - ``aoi_page`` — shown after successful authentication; allows the user
+      to select a polygon AOI layer, browse available DEM datasets, and
+      trigger the download.
+
+    Public widget attributes (consumed by ``easy.py`` and ``dem_handler.py``):
+
+    Auth page:
+        project_id_input (QgsPasswordLineEdit): GCP project ID field.
+        btn_authenticate (QPushButton): Triggers GEE authentication.
+        btn_reset_auth (QPushButton): Clears existing GEE credentials.
+
+    AOI page:
+        layer_combo (QgsMapLayerComboBox): Polygon layer selector.
+        dem_combo (QComboBox): Lists DEM datasets available for the AOI.
+        dem_info (QTextBrowser): Displays metadata for the selected dataset.
+        btn_download_dem (QPushButton): Downloads and loads the DEM into QGIS.
+
+    Signal connections are wired externally by ``easy.py``.  This class
+    must not import ``ee`` or any service module directly.
+    """
 
     def __init__(self, parent=None):
+        """
+        Initialise the dialog and build all widgets.
+
+        Args:
+            parent: Optional parent ``QWidget``.  Defaults to ``None``.
+        """
         super().__init__(parent)
         self._setup_ui()
 
@@ -148,6 +190,20 @@ class EasyDemDialog(QDialog):
     # -----------------------------------------------------------------------
 
     def _build_header(self):
+        """
+        Build and return the dialog header widget.
+
+        The header is a fixed-height (38 px) white bar containing:
+        - The "EasyDEM" brand label (green).
+        - A vertical separator.
+        - A dynamic page-title label (``_header_title``) updated by the
+          controller when the active page changes.
+        - A "?" help button that opens the documentation URL in the browser.
+
+        Returns:
+            QWidget: The fully constructed header widget.
+        """
+
         header = QWidget()
         header.setFixedHeight(38)
         header.setStyleSheet("background-color: #ffffff;")
@@ -204,6 +260,21 @@ class EasyDemDialog(QDialog):
     # -----------------------------------------------------------------------
 
     def _setup_auth_page(self):
+        """
+        Populate ``auth_page`` with the authentication layout.
+
+        The layout is a two-column row centred vertically on the page:
+
+        - **Left column** (200 px fixed): plugin icon + caption, title label,
+          plain-text description, and an info box explaining GEE prerequisites.
+        - **Right card** (260 px fixed, white rounded card): a ``project_id_input``
+          field for the Google Cloud project ID, a ``btn_authenticate`` primary
+          action button, and a ``btn_reset_auth`` discrete reset link.
+
+        All three interactive widgets (``project_id_input``, ``btn_authenticate``,
+        ``btn_reset_auth``) are connected to handlers externally by ``easy.py``.
+        """
+
         page = self.auth_page
         page.setStyleSheet("background-color: #f5f5f5;")
 
@@ -412,6 +483,19 @@ class EasyDemDialog(QDialog):
     # -----------------------------------------------------------------------
 
     def _build_footer(self):
+        """
+        Build and return the dialog footer widget.
+
+        The footer is a fixed-height (52 px) white bar containing the FARM
+        Analytica logo (loaded from ``assets/farm_analytica_logo.svg``) and a
+        short attribution text with a clickable link to the FARM Analytica
+        website.  If the SVG file is not found, the logo falls back to a
+        plain-text label.
+
+        Returns:
+            QWidget: The fully constructed footer widget.
+        """
+
         footer = QWidget()
         footer.setFixedHeight(52)
         footer.setStyleSheet(
@@ -472,9 +556,17 @@ class EasyDemDialog(QDialog):
         """
         Display a modal message box to the user.
 
+        Restores the override cursor before showing the dialog, so it is safe
+        to call while a wait cursor is active.
+
         Args:
-            message: Text content to display.
-            kind: Message type — "info" for informational, "warning" for warnings.
+            message (str): Text content to display.
+            kind (str): Message severity.  Accepted values:
+
+                - ``"info"``    — informational icon, title "Information".
+                - ``"warning"`` — warning icon, title "Warning".
+
+                Any unrecognised value falls back to ``"info"``.
         """
         QApplication.restoreOverrideCursor()
 
