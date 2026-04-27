@@ -22,7 +22,7 @@
 
 import os
 
-from qgis.PyQt.QtCore import QSettings, Qt, QUrl
+from qgis.PyQt.QtCore import Qt, QUrl
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QApplication,
@@ -110,7 +110,6 @@ class EasyDemDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.language = QSettings().value("locale/userLocale", "en")[0:2]
         self._setup_ui()
 
     def _setup_ui(self):
@@ -149,8 +148,6 @@ class EasyDemDialog(QDialog):
     # -----------------------------------------------------------------------
 
     def _build_header(self):
-        is_pt = self.language == "pt"
-
         header = QWidget()
         header.setFixedHeight(38)
         header.setStyleSheet("background-color: #ffffff;")
@@ -169,9 +166,7 @@ class EasyDemDialog(QDialog):
         sep_lbl.setStyleSheet("color: #d0d0d0; font-size: 16px;")
         lay.addWidget(sep_lbl)
 
-        self._header_title = QLabel(
-            "Configuração GEE" if is_pt else "GEE Configuration"
-        )
+        self._header_title = QLabel("GEE Configuration")
         self._header_title.setStyleSheet(
             "color: #616161; font-size: 13px; margin-left: 4px;"
         )
@@ -181,7 +176,7 @@ class EasyDemDialog(QDialog):
 
         self.browser = QPushButton("?")
         self.browser.setFixedSize(28, 28)
-        self.browser.setToolTip("Saiba mais" if is_pt else "Learn more")
+        self.browser.setToolTip("Learn more")
         self.browser.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
@@ -209,8 +204,6 @@ class EasyDemDialog(QDialog):
     # -----------------------------------------------------------------------
 
     def _setup_auth_page(self):
-        is_pt = self.language == "pt"
-
         page = self.auth_page
         page.setStyleSheet("background-color: #f5f5f5;")
 
@@ -266,9 +259,7 @@ class EasyDemDialog(QDialog):
         left_lay.addLayout(logo_col)
 
         # Title
-        title_lbl = QLabel(
-            "Autenticação GEE" if is_pt else "GEE Authentication"
-        )
+        title_lbl = QLabel("GEE Authentication")
         title_lbl.setStyleSheet(
             "color: #1a1a1a; font-size: 16px; font-weight: bold;"
         )
@@ -276,9 +267,6 @@ class EasyDemDialog(QDialog):
 
         # Description
         desc_lbl = QLabel(
-            'O EasyDEM utiliza o <b>Google Earth Engine</b> para processamento. '
-            'Para prosseguir, você precisará de acesso autorizado.'
-            if is_pt else
             'EasyDEM uses <b>Google Earth Engine</b> for processing. '
             'To continue, you will need authorized access.'
         )
@@ -310,8 +298,6 @@ class EasyDemDialog(QDialog):
         info_lay.addWidget(info_icon)
 
         info_text = QLabel(
-            'Requer uma conta GEE ativa e um projeto no Google Cloud Console com a API ativada.'
-            if is_pt else
             'Requires an active GEE account and a Google Cloud Console project with the API enabled.'
         )
         info_text.setWordWrap(True)
@@ -338,9 +324,7 @@ class EasyDemDialog(QDialog):
         card_lay.setSpacing(7)
 
         # Label
-        pid_lbl = QLabel(
-            "ID DO PROJETO (GOOGLE CLOUD)" if is_pt else "PROJECT ID (GOOGLE CLOUD)"
-        )
+        pid_lbl = QLabel("PROJECT ID (GOOGLE CLOUD)")
         pid_lbl.setStyleSheet(
             "color: #9e9e9e; font-size: 10px; letter-spacing: 1px; font-weight: bold;"
         )
@@ -350,7 +334,7 @@ class EasyDemDialog(QDialog):
         self.project_id_input = QgsPasswordLineEdit()
         self.project_id_input.setEchoMode(QLineEdit.EchoMode.Normal)
         self.project_id_input.setPlaceholderText(
-            "ex: meu-projeto-geoespacial-42" if is_pt else "e.g. my-geospatial-project-42"
+            "e.g. my-geospatial-project-42"
         )
         self.project_id_input.setFixedHeight(30)
         self.project_id_input.setStyleSheet("""
@@ -372,9 +356,7 @@ class EasyDemDialog(QDialog):
         card_lay.addSpacing(3)
 
         # Authenticate button
-        self.btn_authenticate = QPushButton(
-            "🔑   Validar ID" if is_pt else "🔑   Validate ID"
-        )
+        self.btn_authenticate = QPushButton("🔑   Validate ID")
         self.btn_authenticate.setFixedHeight(34)
         self.btn_authenticate.setStyleSheet(_STYLE_BTN_PRIMARY)
         card_lay.addWidget(self.btn_authenticate)
@@ -382,9 +364,7 @@ class EasyDemDialog(QDialog):
         card_lay.addSpacing(2)
 
         # Reset button — small, discrete
-        self.btn_reset_auth = QPushButton(
-            "Resetar autenticação" if is_pt else "Reset authentication"
-        )
+        self.btn_reset_auth = QPushButton("Reset authentication")
         self.btn_reset_auth.setFixedHeight(20)
         self.btn_reset_auth.setStyleSheet("""
             QPushButton {
@@ -432,8 +412,6 @@ class EasyDemDialog(QDialog):
     # -----------------------------------------------------------------------
 
     def _build_footer(self):
-        is_pt = self.language == "pt"
-
         footer = QWidget()
         footer.setFixedHeight(52)
         footer.setStyleSheet(
@@ -470,20 +448,12 @@ class EasyDemDialog(QDialog):
         farm_text.setTextFormat(Qt.TextFormat.RichText)
         farm_text.setOpenExternalLinks(True)
         farm_text.setWordWrap(True)
-        if is_pt:
-            farm_text.setText(
-                'Este é um projeto gratuito e aberto, apoiado pela '
-                '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
-                'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
-                'Entre em contato sobre soluções comerciais exclusivas e personalizadas.'
-            )
-        else:
-            farm_text.setText(
-                'This is a free and open project, supported by '
-                '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
-                'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
-                'Get in touch for exclusive and personalized commercial solutions.'
-            )
+        farm_text.setText(
+            'This is a free and open project, supported by '
+            '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
+            'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
+            'Get in touch for exclusive and personalized commercial solutions.'
+        )
         farm_text.setStyleSheet("color: #616161; font-size: 8px;")
         farm_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         lay.addWidget(farm_text)
@@ -510,11 +480,11 @@ class EasyDemDialog(QDialog):
 
         config = {
             "info": (
-                "Informação" if self.language == "pt" else "Information",
+                "Information",
                 QMessageBox.Icon.Information,
             ),
             "warning": (
-                "Aviso" if self.language == "pt" else "Warning",
+                "Warning",
                 QMessageBox.Icon.Warning,
             ),
         }
