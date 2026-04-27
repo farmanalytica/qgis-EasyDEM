@@ -137,93 +137,13 @@ If you are an AI assistant working on this codebase, read this before making cha
 
 ---
 
-## Dependencies
-
-Dependencies are listed in `requirements.txt` and installed into the `.venv`
-virtual environment.
-
-| Package | Purpose |
-|---|---|
-| `earthengine-api` | All Google Earth Engine SDK calls (`ee.*`) |
-
----
-
-## Internationalization (i18n)
-
-The plugin is set up for Qt-based translations.
-
-### Marking strings
-
-In `easy.py` (and any class with the helper), use `self.tr("...")`.  In
-`easy_dialog.py` and service files, use a module-level helper:
-
-```python
-from qgis.PyQt.QtCore import QCoreApplication
-
-def tr(message):
-    return QCoreApplication.translate("easydem", message)
-```
-
-> Always use the same context string — `"easydem"` — across all files.
-
-### File layout
-
-```
-i18n/
-    easydem.pro          # Qt project file — lists source files and .ts targets
-    easydem_pt_BR.ts     # Portuguese (Brazil)
-    easydem_es.ts        # Spanish
-    easydem_fr.ts        # French
-    easydem_pt_BR.qm     # Compiled binary (committed for distribution)
-```
-
-### Workflow
-
-```bash
-# 1. Extract / refresh translatable strings
-cd i18n && pylupdate5 easydem.pro
-
-# 2. Translate — open .ts files in Qt Linguist (or edit XML manually)
-
-# 3. Compile to binary
-lrelease i18n/*.ts
-```
-
-### Runtime loading
-
-In `easy.py` `__init__`, install the translator for the current QGIS locale:
-
-```python
-from qgis.PyQt.QtCore import QTranslator
-from qgis.core import QgsApplication
-
-locale = QgsApplication.locale()          # e.g. "pt_BR"
-locale_path = os.path.join(
-    self.plugin_dir, "i18n", f"easydem_{locale}.qm"
-)
-if os.path.exists(locale_path):
-    self.translator = QTranslator()
-    self.translator.load(locale_path)
-    QCoreApplication.installTranslator(self.translator)
-```
-
----
-
 ## Development Setup
 
 This plugin targets **QGIS LTR**.
 
-**Install dependencies**
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate      # Windows
-pip install -r requirements.txt
-```
-
 **Build tasks**
 
-`pavement.py` contains automation tasks (via [Paver](https://pythonhosted.org/Paver/)).  Run `paver` from the project root to list available tasks.
+`pavement.py` contains automation tasks (via [Paver](https://pythonhosted.org/Paver/)).  Run `paver` from the project root to list available tasks.  After running the relevant Paver task, dependencies are installed directly into the QGIS Python environment — no separate virtual environment is needed.
 
 **Hot-reload during development**
 
