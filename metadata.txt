@@ -5,12 +5,12 @@
 [general]
 name=EasyDEM
 qgisMinimumVersion=3.0
-description=Download and visualise Digital Elevation Models via Google Earth Engine
+description=Download and visualise Digital Elevation Models via Google Earth Engine / Baixe e visualize Modelos Digitais de Elevação via Google Earth Engine
 version=4.0
-author=FARM Analytica
-email=livia.scopel@farmanalytica.com.br
+author=Caio Arantes, Lívia Scope, Leandro Eloi
+email=contato@farmanalytica.com.br
 
-about=EasyDEM lets you download Digital Elevation Models (DEMs) directly inside QGIS using Google Earth Engine. Select any polygon layer as your Area of Interest, choose from an automatically filtered catalog of DEM datasets available for that region, and load the result as a styled raster layer — no scripting required. Requires a Google Earth Engine account and a Google Cloud project with the Earth Engine API enabled.
+about=EasyDEM lets you download Digital Elevation Models (DEMs) directly inside QGIS using Google Earth Engine. Select any polygon layer as your Area of Interest, choose from an automatically filtered catalog of DEM datasets available for that region, and load the result as a styled raster layer — no scripting required. Requires a Google Earth Engine account and a Google Cloud project with the Earth Engine API enabled. / O EasyDEM permite baixar Modelos Digitais de Elevação (MDEs) diretamente no QGIS usando o Google Earth Engine. Selecione qualquer camada de polígonos como Área de Interesse, escolha entre um catálogo automaticamente filtrado de datasets de MDE disponíveis para a região e carregue o resultado como uma camada raster estilizada — sem necessidade de programação. Requer uma conta no Google Earth Engine e um projeto no Google Cloud com a API do Earth Engine habilitada.
 
 tracker=https://github.com/farmanalytica/qgis-EasyDEM/issues
 repository=https://github.com/farmanalytica/qgis-EasyDEM
@@ -22,8 +22,6 @@ hasProcessingProvider=no
 changelog=4.0
     - Expanded DEM catalog with additional global and regional datasets
     - Automatic detection of datasets available for the selected AOI
-    - Two-page dialog flow: GEE authentication followed by AOI and dataset selection
-    - DEM loaded directly into QGIS with Magma colour ramp applied
 
 # Tags are comma separated with spaces allowed
 tags=dem, elevation, google earth engine, raster, download, gee
@@ -42,8 +40,8 @@ deprecated=False
 # Check the documentation for more information.
 # plugin_dependencies=
 
-Category of the plugin: Raster, Vector, Database or Web
-# category=
+# Category of the plugin: Raster, Vector, Database or Web
+# category=Raster
 
 # If the plugin can run on QGIS Server.
 server=False
