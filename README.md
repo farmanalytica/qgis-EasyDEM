@@ -141,6 +141,16 @@ If you are an AI assistant working on this codebase, read this before making cha
 
 This plugin targets **QGIS LTR**.
 
+**Clone the repository**
+
+Clone directly into the QGIS plugins folder so QGIS can discover it:
+
+```bash
+# Windows (QGIS LTR default location)
+cd %APPDATA%\QGIS\QGIS3\profiles\default\python\plugins
+git clone https://github.com/farmanalytica/qgis-EasyDEM
+```
+
 **Build tasks**
 
 `pavement.py` contains automation tasks (via [Paver](https://pythonhosted.org/Paver/)).  Run `paver` from the project root to list available tasks.  After running the relevant Paver task, dependencies are installed directly into the QGIS Python environment — no separate virtual environment is needed.
