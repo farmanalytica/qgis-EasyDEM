@@ -13,21 +13,6 @@ through the full plugin workflow:
 All widget construction is handled here.  Signal connections (wiring buttons
 to service calls) are made externally by ``easy.py`` to keep this module
 free of business logic and the ``ee`` SDK.
-
-/***************************************************************************
-        begin                : 2026-04-22
-        copyright            : (C) 2026 by FARM Analytica
-        email                : leandro.eloi@farmanalytica.com.br
- ***************************************************************************/
-
-/***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
 """
 
 import os
