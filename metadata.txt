@@ -5,12 +5,12 @@
 [general]
 name=EasyDEM
 qgisMinimumVersion=3.0
-description=DEM
+description=Download and visualise Digital Elevation Models via Google Earth Engine
 version=4.0
 author=FARM Analytica
 email=livia.scopel@farmanalytica.com.br
 
-about=Provide a brief description of the plugin and its purpose.
+about=EasyDEM lets you download Digital Elevation Models (DEMs) directly inside QGIS using Google Earth Engine. Select any polygon layer as your Area of Interest, choose from an automatically filtered catalog of DEM datasets available for that region, and load the result as a styled raster layer — no scripting required. Requires a Google Earth Engine account and a Google Cloud project with the Earth Engine API enabled.
 
 tracker=https://github.com/farmanalytica/qgis-EasyDEM/issues
 repository=https://github.com/farmanalytica/qgis-EasyDEM
@@ -19,14 +19,17 @@ repository=https://github.com/farmanalytica/qgis-EasyDEM
 # Recommended items:
 
 hasProcessingProvider=no
-# Uncomment the following line and add your changelog:
-# changelog=
+changelog=4.0
+    - Expanded DEM catalog with additional global and regional datasets
+    - Automatic detection of datasets available for the selected AOI
+    - Two-page dialog flow: GEE authentication followed by AOI and dataset selection
+    - DEM loaded directly into QGIS with Magma colour ramp applied
 
 # Tags are comma separated with spaces allowed
-tags=python
+tags=dem, elevation, google earth engine, raster, download, gee
 
-homepage=http://homepage
-category=Plugins
+homepage=https://farmanalytica.github.io/qgis-EasyDEM/
+category=Raster
 icon=icon.png
 # experimental flag
 experimental=False
