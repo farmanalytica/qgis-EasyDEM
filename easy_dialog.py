@@ -198,7 +198,7 @@ class EasyDemDialog(QDialog):
             }
         """)
         self.browser.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://caioarantes.github.io/EasyDEM/"))
+            lambda: QDesktopServices.openUrl(QUrl("https://farmanalytica.github.io/qgis-EasyDEM/"))
         )
         lay.addWidget(self.browser)
 
@@ -472,17 +472,17 @@ class EasyDemDialog(QDialog):
         farm_text.setWordWrap(True)
         if is_pt:
             farm_text.setText(
-                'Este é um projeto gratuito e aberto, desenvolvido pela '
+                'Este é um projeto gratuito e aberto, apoiado pela '
                 '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
                 'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
-                'Fale conosco sobre soluções comerciais exclusivas e personalizadas.'
+                'Entre em contato sobre soluções comerciais exclusivas e personalizadas.'
             )
         else:
             farm_text.setText(
-                'This is a free and open project, developed by '
+                'This is a free and open project, supported by '
                 '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
                 'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
-                'Contact us for exclusive and personalized commercial solutions.'
+                'Get in touch for exclusive and personalized commercial solutions.'
             )
         farm_text.setStyleSheet("color: #616161; font-size: 8px;")
         farm_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
