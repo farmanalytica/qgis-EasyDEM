@@ -148,12 +148,25 @@ Clone directly into the QGIS plugins folder so QGIS can discover it:
 ```bash
 # Windows (QGIS LTR default location)
 cd %APPDATA%\QGIS\QGIS3\profiles\default\python\plugins
+
+# Linux
+cd ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins
+
 git clone https://github.com/farmanalytica/qgis-EasyDEM
 ```
 
-**Build tasks**
+**Install dependencies**
 
-`pavement.py` contains automation tasks (via [Paver](https://pythonhosted.org/Paver/)).  Run `paver` from the project root to list available tasks.  After running the relevant Paver task, dependencies are installed directly into the QGIS Python environment — no separate virtual environment is needed.
+```bash
+cd qgis-EasyDEM
+paver setup
+```
+
+This installs all required packages directly into the QGIS Python environment.  No separate virtual environment is needed.
+
+**Other build tasks**
+
+`pavement.py` contains additional automation tasks (via [Paver](https://pythonhosted.org/Paver/)).  Run `paver` from the project root to list available tasks.
 
 **Hot-reload during development**
 
