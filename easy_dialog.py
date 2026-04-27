@@ -450,7 +450,7 @@ class EasyDemDialog(QDialog):
         farm_icon.setFixedHeight(24)
         farm_icon.setStyleSheet("background: transparent;")
         _logo_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "medias", "farm_analytica_logo.svg"
+            os.path.dirname(os.path.abspath(__file__)), "assets", "farm_analytica_logo.svg"
         )
         if os.path.exists(_logo_path):
             _pix = QPixmap(_logo_path).scaledToHeight(
