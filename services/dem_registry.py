@@ -78,7 +78,7 @@ class DEMRegistry:
     def __init__(self):
         catalog_path = Path(__file__).parent.parent / "assets" / "dem_catalog.json"
 
-        with open(catalog_path, encoding="utf-8") as f:
+        with open(catalog_path, encoding="utf-8-sig") as f:
             data = json.load(f)
 
         self._datasets = {d["name"]: DEMDataset(**d) for d in data}
