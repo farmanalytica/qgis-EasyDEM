@@ -139,18 +139,24 @@ If you are an AI assistant working on this codebase, read this before making cha
 
 ## Development Setup
 
-This plugin targets **QGIS LTR**.
+This plugin supports **QGIS 3.x LTR** and **QGIS 4.0+**.
 
 **Clone the repository**
 
 Clone directly into the QGIS plugins folder so QGIS can discover it:
 
 ```bash
-# Windows (QGIS LTR default location)
+# Windows QGIS 3.x
 cd %APPDATA%\QGIS\QGIS3\profiles\default\python\plugins
 
-# Linux
+# Windows QGIS 4.0+
+cd %APPDATA%\QGIS\profiles\default\python\plugins
+
+# Linux QGIS 3.x
 cd ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins
+
+# Linux QGIS 4.0+
+cd ~/.local/share/QGIS/profiles/default/python/plugins
 
 git clone https://github.com/farmanalytica/qgis-EasyDEM
 ```
@@ -163,10 +169,6 @@ paver setup
 ```
 
 This installs all required packages directly into the QGIS Python environment.  No separate virtual environment is needed.
-
-**Other build tasks**
-
-`pavement.py` contains additional automation tasks (via [Paver](https://pythonhosted.org/Paver/)).  Run `paver` from the project root to list available tasks.
 
 **Hot-reload during development**
 
