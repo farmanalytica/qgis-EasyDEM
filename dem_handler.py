@@ -53,7 +53,9 @@ class DEMHandler:
                 self.dlg.pop_message("Select a layer.", "warning")
                 return
 
-            self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(layer)
+            self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(
+                layer
+            )
 
             self.load_available_datasets()
 
@@ -69,7 +71,7 @@ class DEMHandler:
         """
         dataset_name = self.dlg.dem_combo.currentData()
 
-        QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
 
         try:
@@ -119,7 +121,9 @@ class DEMHandler:
             self.dlg.dem_combo.clear()
             return
         try:
-            self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(layer)
+            self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(
+                layer
+            )
             self.load_available_datasets()
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")
@@ -133,7 +137,7 @@ class DEMHandler:
         if not self.current_aoi:
             return
 
-        QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
 
         try:
@@ -141,7 +145,9 @@ class DEMHandler:
 
             for dataset in registry.list_datasets():
                 QApplication.processEvents()
-                if registry.is_available(dataset.name, geometry, aoi_bbox=self.current_aoi_bbox):
+                if registry.is_available(
+                    dataset.name, geometry, aoi_bbox=self.current_aoi_bbox
+                ):
                     self.dlg.dem_combo.addItem(dataset.name, dataset.name)
         finally:
             QApplication.restoreOverrideCursor()
