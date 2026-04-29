@@ -171,7 +171,7 @@ class EasyDem:
             self.dlg.dem_combo.currentIndexChanged.connect(self._on_dataset_changed)
 
         self.dlg.show()
-        result = self.dlg.exec_()
+        result = self.dlg.exec() if hasattr(self.dlg, 'exec') else self.dlg.exec_()
         if result:
             pass
 
