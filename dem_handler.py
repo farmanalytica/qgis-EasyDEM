@@ -71,7 +71,11 @@ class DEMHandler:
         """
         dataset_name = self.dlg.dem_combo.currentData()
 
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            WAIT_CURSOR = Qt.CursorShape.WaitCursor
+        except AttributeError:
+            WAIT_CURSOR = Qt.WaitCursor
+        QApplication.setOverrideCursor(WAIT_CURSOR)
         QApplication.processEvents()
 
         try:
@@ -137,7 +141,11 @@ class DEMHandler:
         if not self.current_aoi:
             return
 
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            WAIT_CURSOR = Qt.CursorShape.WaitCursor
+        except AttributeError:
+            WAIT_CURSOR = Qt.WaitCursor
+        QApplication.setOverrideCursor(WAIT_CURSOR)
         QApplication.processEvents()
 
         try:
