@@ -17,8 +17,8 @@ from qgis.core import (
     QgsCoordinateTransform,
 )
 
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt, QTimer
+from qgis.PyQt.QtWidgets import QApplication
+from qgis.PyQt.QtCore import Qt, QTimer
 
 from .services.aoi_service import AOIService
 from .services.dem_service import DEMService
