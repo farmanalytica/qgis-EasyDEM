@@ -17,7 +17,7 @@ free of business logic and the ``ee`` SDK.
 
 import os
 
-from qgis.PyQt.QtCore import Qt, QUrl
+from qgis.PyQt.QtCore import Qt, QTimer, QUrl
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QApplication,
@@ -30,6 +30,7 @@ from qgis.PyQt.QtWidgets import (
     QStackedWidget,
     QWidget,
     QComboBox,
+    QListView,
     QTextBrowser,
     QFrame,
     QSizePolicy,
@@ -95,10 +96,130 @@ QPushButton:disabled {
 }
 """
 
+_STYLE_BTN_SECONDARY = """
+QPushButton {
+    background-color: #ffffff;
+    color: #1b6b39;
+    border: 1px solid #c8d8ce;
+    border-radius: 7px;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 0 12px;
+}
+QPushButton:hover {
+    background-color: #e8f5e9;
+    border-color: #8db99c;
+}
+QPushButton:pressed {
+    background-color: #d7eadb;
+    border-color: #1b6b39;
+}
+QPushButton:disabled {
+    background-color: #eeeeee;
+    color: #9e9e9e;
+    border-color: #e0e0e0;
+}
+"""
+
+_STYLE_AOI_PAGE = """
+QWidget#aoiPage {
+    background-color: #f5f5f5;
+}
+QFrame#aoiPanel {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+}
+QLabel {
+    background: transparent;
+    border: none;
+}
+QLabel#aoiTitle {
+    color: #1a1a1a;
+    font-size: 15px;
+    font-weight: bold;
+}
+QLabel#aoiSubtitle {
+    color: #616161;
+    font-size: 10px;
+}
+QLabel#aoiFieldLabel {
+    color: #9e9e9e;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+QComboBox, QgsMapLayerComboBox {
+    combobox-popup: 0;
+    background-color: #ffffff;
+    color: #212121;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+QComboBox:focus, QgsMapLayerComboBox:focus {
+    border: 1.5px solid #1b6b39;
+}
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    color: #212121;
+    border: 1px solid #bdbdbd;
+    selection-background-color: #e8f5e9;
+    selection-color: #1a1a1a;
+    outline: 0;
+}
+QTextBrowser#demInfo {
+    background-color: #fbfcfb;
+    color: #212121;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 11px;
+}
+QTextBrowser#demInfo:focus {
+    border-color: #1b6b39;
+}
+"""
+
 
 # ---------------------------------------------------------------------------
 # Dialog class
 # ---------------------------------------------------------------------------
+
+class LimitedPopupComboBox(QComboBox):
+    """ComboBox with a bounded popup height for long catalogs."""
+
+    def __init__(self, parent=None, popup_height=170):
+        super().__init__(parent)
+        self._popup_height = popup_height
+
+    def showPopup(self):
+        view = self.view()
+        view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        super().showPopup()
+        QTimer.singleShot(0, self._resize_popup)
+
+    def _resize_popup(self):
+        view = self.view()
+        popup = view.window()
+        row_height = max(view.sizeHintForRow(0), self.fontMetrics().height() + 4)
+        visible_rows = min(self.maxVisibleItems(), self.count())
+        popup_height = min(self._popup_height, max(row_height * visible_rows + 2, row_height + 2))
+        popup_width = self.width()
+
+        top_left = self.mapToGlobal(self.rect().bottomLeft())
+        parent_window = self.window()
+        if parent_window:
+            bottom_limit = parent_window.mapToGlobal(parent_window.rect().bottomLeft()).y() - 8
+            available_below = bottom_limit - top_left.y()
+            if row_height * 4 <= available_below < popup_height:
+                popup_height = available_below
+
+        popup.setFixedSize(popup_width, popup_height)
+        popup.move(top_left)
+        view.setGeometry(0, 0, popup_width, popup_height)
+
 
 class EasyDemDialog(QDialog):
     """
@@ -136,12 +257,21 @@ class EasyDemDialog(QDialog):
         Args:
             parent: Optional parent ``QWidget``.  Defaults to ``None``.
         """
-        super().__init__(parent)
+        self._qgis_parent = parent
+        super().__init__(None)
         self._setup_ui()
 
     def _setup_ui(self):
         """Set up the dialog layout and widgets."""
         self.setWindowTitle("EasyDEM")
+        self.setWindowFlags(
+            Qt.WindowType.Window
+            | Qt.WindowType.WindowSystemMenuHint
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowMinimizeButtonHint
+            | Qt.WindowType.WindowCloseButtonHint
+        )
+        self.setWindowModality(Qt.WindowModality.NonModal)
         self.setFixedSize(600, 400)
         self.setStyleSheet(_STYLE_DIALOG)
 
@@ -444,24 +574,100 @@ class EasyDemDialog(QDialog):
 
     def _setup_aoi_page(self):
         """Set up the AOI page with a polygon layer selector and load button."""
-        layout = QVBoxLayout(self.aoi_page)
+        page = self.aoi_page
+        page.setObjectName("aoiPage")
+        page.setStyleSheet(_STYLE_AOI_PAGE)
 
-        layout.addWidget(QLabel("Select AOI Layer"))
+        outer = QVBoxLayout(page)
+        outer.setContentsMargins(14, 10, 14, 10)
+        outer.setSpacing(0)
+
+        panel = QFrame()
+        panel.setObjectName("aoiPanel")
+        panel_lay = QVBoxLayout(panel)
+        panel_lay.setContentsMargins(16, 12, 16, 12)
+        panel_lay.setSpacing(6)
+
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(8)
+
+        title_col = QVBoxLayout()
+        title_col.setContentsMargins(0, 0, 0, 0)
+        title_col.setSpacing(1)
+
+        title_lbl = QLabel("AOI and DEM inputs")
+        title_lbl.setObjectName("aoiTitle")
+        title_col.addWidget(title_lbl)
+
+        subtitle_lbl = QLabel("Select the polygon layer and elevation dataset.")
+        subtitle_lbl.setObjectName("aoiSubtitle")
+        title_col.addWidget(subtitle_lbl)
+
+        title_row.addLayout(title_col, 1)
+
+        panel_lay.addLayout(title_row)
+
+        layer_lbl = QLabel("AOI LAYER")
+        layer_lbl.setObjectName("aoiFieldLabel")
+        panel_lay.addWidget(layer_lbl)
 
         self.layer_combo = QgsMapLayerComboBox()
+        self.layer_combo.setObjectName("layerCombo")
         self.layer_combo.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.layer_combo.setFixedHeight(28)
+        panel_lay.addWidget(self.layer_combo)
 
-        self.btn_download_dem = QPushButton("Download DEM")
-        self.dem_combo = QComboBox()
+        dem_lbl = QLabel("DEM DATASET")
+        dem_lbl.setObjectName("aoiFieldLabel")
+        panel_lay.addWidget(dem_lbl)
+
+        self.dem_combo = LimitedPopupComboBox(popup_height=170)
+        self.dem_combo.setObjectName("demCombo")
+        self.dem_combo.setFixedHeight(28)
+        self.dem_combo.setMaxVisibleItems(10)
+        self.dem_combo.setMinimumContentsLength(28)
+        self.dem_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        dem_combo_view = QListView(self.dem_combo)
+        dem_combo_view.setUniformItemSizes(True)
+        dem_combo_view.setVerticalScrollMode(
+            QListView.ScrollMode.ScrollPerItem
+        )
+        dem_combo_view.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self.dem_combo.setView(dem_combo_view)
+        panel_lay.addWidget(self.dem_combo)
 
         self.dem_info = QTextBrowser()
+        self.dem_info.setObjectName("demInfo")
         self.dem_info.setOpenExternalLinks(True)
-        self.dem_info.setMinimumHeight(120)
+        self.dem_info.setMinimumHeight(96)
+        panel_lay.addWidget(self.dem_info, 1)
 
-        layout.addWidget(self.layer_combo)
-        layout.addWidget(self.dem_combo)
-        layout.addWidget(self.dem_info)
-        layout.addWidget(self.btn_download_dem)
+        action_row = QHBoxLayout()
+        action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.setSpacing(8)
+
+        self.btn_back_auth = QPushButton("Authentication Screen")
+        self.btn_back_auth.setFixedSize(140, 30)
+        self.btn_back_auth.setToolTip("Return to GEE authentication")
+        self.btn_back_auth.setStyleSheet(_STYLE_BTN_SECONDARY)
+        self.btn_back_auth.clicked.connect(self.show_auth_page)
+        action_row.addWidget(self.btn_back_auth, 0, Qt.AlignmentFlag.AlignLeft)
+
+        action_row.addStretch(1)
+
+        self.btn_download_dem = QPushButton("Download DEM")
+        self.btn_download_dem.setFixedSize(140, 30)
+        self.btn_download_dem.setStyleSheet(_STYLE_BTN_PRIMARY)
+        action_row.addWidget(self.btn_download_dem, 0, Qt.AlignmentFlag.AlignRight)
+
+        panel_lay.addLayout(action_row)
+
+        outer.addWidget(panel)
 
     # -----------------------------------------------------------------------
     # FOOTER
@@ -535,7 +741,13 @@ class EasyDemDialog(QDialog):
 
     def show_aoi_page(self):
         """Switch the stacked widget to the AOI selection page."""
+        self._header_title.setText("Inputs & Parameters")
         self.stack.setCurrentWidget(self.aoi_page)
+
+    def show_auth_page(self):
+        """Switch the stacked widget to the authentication page."""
+        self._header_title.setText("GEE Configuration")
+        self.stack.setCurrentWidget(self.auth_page)
 
     def pop_message(self, message, kind):
         """
