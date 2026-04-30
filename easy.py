@@ -170,6 +170,12 @@ class EasyDem:
 
             self.dlg.dem_combo.currentIndexChanged.connect(self._on_dataset_changed)
 
+            self.dlg.btn_browse_folder.clicked.connect(self.dem_handler.handle_folder_selection)
+            
+            saved_folder = self.dem_handler.load_download_folder()
+            if saved_folder:
+                self.dlg.folder_input.setText(saved_folder)
+
         self.dlg.show()
         result = self.dlg.exec() if hasattr(self.dlg, 'exec') else self.dlg.exec_()
         if result:

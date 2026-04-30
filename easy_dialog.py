@@ -33,6 +33,7 @@ from qgis.PyQt.QtWidgets import (
     QTextBrowser,
     QFrame,
     QSizePolicy,
+    QFileDialog,
 )
 from qgis.PyQt.QtGui import QPixmap, QDesktopServices
 
@@ -458,10 +459,22 @@ class EasyDemDialog(QDialog):
         self.dem_info.setOpenExternalLinks(True)
         self.dem_info.setMinimumHeight(120)
 
+        folder_layout = QHBoxLayout()
+        self.folder_input = QLineEdit()
+        self.folder_input.setPlaceholderText("Default Temporary Folder")
+        self.folder_input.setReadOnly(True)
+        
+        self.btn_browse_folder = QPushButton("Browse...")
+        
+        folder_layout.addWidget(QLabel("Download to:"))
+        folder_layout.addWidget(self.folder_input)
+        folder_layout.addWidget(self.btn_browse_folder)
+
         layout.addWidget(self.layer_combo)
         layout.addWidget(self.dem_combo)
         layout.addWidget(self.dem_info)
-        layout.addWidget(self.btn_download_dem)
+        layout.addLayout(folder_layout)
+        layout.addWidget(self.btn_download_dem)  
 
     # -----------------------------------------------------------------------
     # FOOTER
