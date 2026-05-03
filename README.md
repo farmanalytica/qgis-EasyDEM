@@ -163,12 +163,11 @@ git clone https://github.com/farmanalytica/qgis-EasyDEM
 
 **Install dependencies**
 
-```bash
-cd qgis-EasyDEM
-paver setup
-```
-
-This installs all required packages directly into the QGIS Python environment.  No separate virtual environment is needed.
+| Command | Description |
+|---|---|
+| `python -m paver` | Default — installs dependencies into `extlibs/` (alias for `build_extlibs`) |
+| `python -m paver build_extlibs` | Vendors all `requirements.txt` packages into `extlibs/` via `pip --target` |
+| `python -m paver clean_extlibs` | Removpaveres the `extlibs/` directory |
 
 **Hot-reload during development**
 
