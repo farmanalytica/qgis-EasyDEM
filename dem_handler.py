@@ -1,38 +1,42 @@
 # -*- coding: utf-8 -*-
 """
-DEM handling, loading, and rendering module for EasyDEM QGIS plugin.
+DEM handler orchestration module for EasyDEM QGIS plugin.
 
-Handles DEM service operations, AOI management, dataset loading,
-and color ramp rendering for raster layers.
+Orchestrates DEM operations, AOI management, and coordinates between
+services for dataset loading and layer rendering.
 """
 
 from qgis.core import (
-    QgsRasterLayer,
-    QgsColorRampShader,
     QgsProject,
-    QgsRasterShader,
-    QgsSingleBandPseudoColorRenderer,
-    QgsStyle,
-    QgsLayerTreeLayer,
     QgsCoordinateTransform,
-    QgsSettings,
 )
 
 from qgis.PyQt.QtWidgets import QApplication, QFileDialog
 from qgis.PyQt.QtCore import Qt, QTimer
-from .services.map_utils import hybrid_function
 
+try:
+    from qgis.PyQt.QtCore import Qt
+
+    WAIT_CURSOR = Qt.CursorShape.WaitCursor
+except AttributeError:
+    from qgis.PyQt.QtCore import Qt
+
+    WAIT_CURSOR = Qt.WaitCursor
+
+from .services.map_utils import hybrid_function
 from .services.aoi_service import AOIService
 from .services.dem_service import DEMService
-from .services.dem_registry import DEMRegistry
+from .services.dem_renderer import DEMRenderer
+from .services.dataset_manager import DatasetManager
+from .services.settings_manager import SettingsManager
 
 
 class DEMHandler:
     """
-    Handles DEM operations, layer management, and rendering.
+    Orchestrates DEM operations and coordinates between services.
 
-    Manages AOI-based dataset loading, DEM service calls, and
-    visualization of raster data with color ramps.
+    Manages AOI-based dataset loading, DEM service calls, and layer
+    management across the plugin.
     """
 
     def __init__(self, dialog, gee_service, interface):
@@ -69,14 +73,16 @@ class DEMHandler:
         Download the selected DEM and load it into QGIS.
 
         The file is saved to the folder chosen by the user via the Browse
-        button.  When no folder is selected, it falls back to the system's
+        button. When no folder is selected, it falls back to the system's
         temporary directory.
 
         Args:
             interface: The QGIS interface instance for message bar.
         """
         if not self.current_aoi:
-            self.dlg.pop_message("No AOI selected. Please select a layer first.", "warning")
+            self.dlg.pop_message(
+                "No AOI selected. Please select a layer first.", "warning"
+            )
             return
 
         dataset_name = self.dlg.dem_combo.currentData()
@@ -86,10 +92,6 @@ class DEMHandler:
 
         output_folder = self.dlg.folder_input.text().strip() or None
 
-        try:
-            WAIT_CURSOR = Qt.CursorShape.WaitCursor
-        except AttributeError:
-            WAIT_CURSOR = Qt.WaitCursor
         QApplication.setOverrideCursor(WAIT_CURSOR)
         QApplication.processEvents()
 
@@ -97,7 +99,7 @@ class DEMHandler:
             dem_path = DEMService.download_dem(
                 self.current_aoi, dataset_name, output_folder=output_folder
             )
-            self._load_dem_to_qgis(dem_path, dataset_name)
+            DEMRenderer.load_dem_to_qgis(dem_path, dataset_name)
             interface.messageBar().pushMessage(
                 "EasyDEM", f"DEM '{dataset_name}' loaded successfully."
             )
@@ -155,36 +157,16 @@ class DEMHandler:
 
     def load_available_datasets(self):
         """Load available datasets in the combobox based on current AOI."""
-        registry = DEMRegistry()
-
-        self.dlg.dem_combo.clear()
-
-        if not self.current_aoi:
-            return
-
-        try:
-            WAIT_CURSOR = Qt.CursorShape.WaitCursor
-        except AttributeError:
-            WAIT_CURSOR = Qt.WaitCursor
-        QApplication.setOverrideCursor(WAIT_CURSOR)
-        QApplication.processEvents()
-
-        try:
-            geometry = self.current_aoi.geometry()
-
-            for dataset in registry.list_datasets():
-                QApplication.processEvents()
-                if registry.is_available(
-                    dataset.name, geometry, aoi_bbox=self.current_aoi_bbox
-                ):
-                    self.dlg.dem_combo.addItem(dataset.name, dataset.name)
-        finally:
-            QApplication.restoreOverrideCursor()
+        DatasetManager.load_available_datasets(
+            self.dlg.dem_combo,
+            self.current_aoi,
+            self.current_aoi_bbox,
+            on_error=lambda msg: self.dlg.pop_message(msg, "warning"),
+        )
 
     def handle_folder_selection(self):
         """Open a folder picker, persist the choice, and update the UI."""
-
-        current_folder = self.load_download_folder()
+        current_folder = SettingsManager.load_download_folder()
 
         folder = QFileDialog.getExistingDirectory(
             self.dlg,
@@ -194,109 +176,15 @@ class DEMHandler:
 
         if folder:
             self.dlg.folder_input.setText(folder)
-            self.save_download_folder(folder)
-
-    def save_download_folder(self, folder_path):
-        """Persist the chosen download folder in QGIS settings."""
-
-        settings = QgsSettings()
-        settings.setValue("qgis-EasyDEM/dem_download_folder", folder_path)
-
-    def load_download_folder(self):
-        """Return the previously saved download folder, or empty string."""
-
-        settings = QgsSettings()
-        return settings.value("qgis-EasyDEM/dem_download_folder", "", type=str)
-    
-
-    def handle_hybrid_layer(self):
-        hybrid_function()
-        self.interface.messageBar().pushMessage("Google Hybrid Layer loaded sucessfully")
-
-
-
-    def _build_color_renderer(
-        self, provider, min_val, max_val
-    ) -> QgsSingleBandPseudoColorRenderer:
-        """
-        Build the color ramp for the layer.
-
-        Args:
-            provider: The raster data provider.
-            min_val: Minimum value for the color ramp.
-            max_val: Maximum value for the color ramp.
-
-        Returns:
-            A QgsSingleBandPseudoColorRenderer with Magma color ramp.
-
-        Raises:
-            RuntimeError: If the Magma color ramp is not found.
-        """
-        color_ramp = QgsStyle().defaultStyle().colorRamp("Magma")
-        if not color_ramp:
-            raise RuntimeError("Color ramp 'Magma' not found in QGIS style library.")
-
-        num_stops = 5
-        step = (max_val - min_val) / (num_stops - 1)
-        color_ramp_items = [
-            QgsColorRampShader.ColorRampItem(
-                min_val + i * step, color_ramp.color(i / (num_stops - 1))
-            )
-            for i in range(num_stops)
-        ]
-
-        color_ramp_shader = QgsColorRampShader()
-        color_ramp_shader.setColorRampType(QgsColorRampShader.Interpolated)
-        color_ramp_shader.setColorRampItemList(color_ramp_items)
-
-        raster_shader = QgsRasterShader()
-        raster_shader.setRasterShaderFunction(color_ramp_shader)
-
-        renderer = QgsSingleBandPseudoColorRenderer(provider, 1, raster_shader)
-        renderer.setClassificationMin(min_val)
-        renderer.setClassificationMax(max_val)
-        return renderer
+            SettingsManager.save_download_folder(folder)
 
     def on_dataset_changed(self):
         """Update the dataset info panel when the selected dataset changes."""
-        dataset_name = self.dlg.dem_combo.currentData()
-        if not dataset_name:
-            self.dlg.dem_info.clear()
-            return
+        DatasetManager.update_dataset_info(self.dlg.dem_combo, self.dlg.dem_info)
 
-        registry = DEMRegistry()
-        dataset = registry.get_dataset(dataset_name)
-        self.dlg.dem_info.setHtml(dataset.info)
-
-    def _load_dem_to_qgis(self, path: str, dataset_name: str) -> QgsRasterLayer:
-        """
-        Load a DEM GeoTIFF into QGIS with a Magma color ramp renderer.
-
-        Args:
-            path: Absolute path to the GeoTIFF file.
-            dataset_name: Name used as the layer label in QGIS.
-
-        Returns:
-            The loaded and styled QgsRasterLayer.
-
-        Raises:
-            RuntimeError: If the raster layer is invalid.
-        """
-        raster_layer = QgsRasterLayer(path, dataset_name)
-        if not raster_layer.isValid():
-            raise RuntimeError("Failed to load DEM into QGIS.")
-
-        provider = raster_layer.dataProvider()
-        stats = provider.bandStatistics(1)
-        min_val, max_val = stats.minimumValue, stats.maximumValue
-
-        renderer = self._build_color_renderer(provider, min_val, max_val)
-        raster_layer.setRenderer(renderer)
-
-        QgsProject.instance().addMapLayer(raster_layer, False)
-        QgsProject.instance().layerTreeRoot().insertChildNode(
-            0, QgsLayerTreeLayer(raster_layer)
+    def handle_hybrid_layer(self):
+        """Load the Google hybrid basemap layer."""
+        hybrid_function()
+        self.interface.messageBar().pushMessage(
+            "EasyDEM", "Google Hybrid Layer loaded successfully"
         )
-        raster_layer.triggerRepaint()
-
-        return raster_layer
