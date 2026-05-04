@@ -36,6 +36,7 @@ from .resources import *
 from .easy_dialog import EasyDemDialog
 from .dem_handler import DEMHandler
 from .services.gee_service import GEEService
+from .services.settings_manager import SettingsManager
 
 
 class EasyDem:
@@ -163,13 +164,19 @@ class EasyDem:
                 self.dem_handler.handle_layer_changed
             )
 
-            self.dlg.dem_combo.currentIndexChanged.connect(self.dem_handler.on_dataset_changed)
+            self.dlg.dem_combo.currentIndexChanged.connect(
+                self.dem_handler.on_dataset_changed
+            )
 
             self.dlg.btn_browse_folder.clicked.connect(
                 self.dem_handler.handle_folder_selection
             )
 
-            saved_folder = self.dem_handler.load_download_folder()
+            self.dlg.btn_hybrid_layer.clicked.connect(
+                self.dem_handler.handle_hybrid_layer
+            )
+
+            saved_folder = SettingsManager.load_download_folder()
             if saved_folder:
                 self.dlg.folder_input.setText(saved_folder)
 
