@@ -249,6 +249,17 @@ class DEMHandler:
         renderer.setClassificationMax(max_val)
         return renderer
 
+    def on_dataset_changed(self):
+        """Update the dataset info panel when the selected dataset changes."""
+        dataset_name = self.dlg.dem_combo.currentData()
+        if not dataset_name:
+            self.dlg.dem_info.clear()
+            return
+
+        registry = DEMRegistry()
+        dataset = registry.get_dataset(dataset_name)
+        self.dlg.dem_info.setHtml(dataset.info)
+
     def _load_dem_to_qgis(self, path: str, dataset_name: str) -> QgsRasterLayer:
         """
         Load a DEM GeoTIFF into QGIS with a Magma color ramp renderer.
