@@ -20,6 +20,7 @@ from qgis.core import (
 
 from qgis.PyQt.QtWidgets import QApplication, QFileDialog
 from qgis.PyQt.QtCore import Qt, QTimer
+from .services.map_utils import hybrid_function
 
 from .services.aoi_service import AOIService
 from .services.dem_service import DEMService
@@ -206,6 +207,13 @@ class DEMHandler:
 
         settings = QgsSettings()
         return settings.value("qgis-EasyDEM/dem_download_folder", "", type=str)
+    
+
+    def handle_hybrid_layer(self):
+        hybrid_function()
+        self.interface.messageBar().pushMessage("Google Hybrid Layer loaded sucessfully")
+
+
 
     def _build_color_renderer(
         self, provider, min_val, max_val

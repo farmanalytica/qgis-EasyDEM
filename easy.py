@@ -169,6 +169,8 @@ class EasyDem:
                 self.dem_handler.handle_folder_selection
             )
 
+            self.dlg.btn_hybrid_layer.clicked.connect(self.dem_handler.handle_hybrid_layer)
+
             saved_folder = self.dem_handler.load_download_folder()
             if saved_folder:
                 self.dlg.folder_input.setText(saved_folder)
