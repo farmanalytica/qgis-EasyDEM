@@ -16,10 +16,9 @@ from qgis.core import (
     QgsLayerTreeLayer,
     QgsCoordinateTransform,
     QgsSettings,
-    QFileDialog,
 )
 
-from qgis.PyQt.QtWidgets import QApplication
+from qgis.PyQt.QtWidgets import QApplication, QFileDialog
 from qgis.PyQt.QtCore import Qt, QTimer
 
 from .services.aoi_service import AOIService

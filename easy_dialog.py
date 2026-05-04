@@ -33,7 +33,6 @@ from qgis.PyQt.QtWidgets import (
     QTextBrowser,
     QFrame,
     QSizePolicy,
-    QFileDialog,
 )
 from qgis.PyQt.QtGui import QPixmap, QDesktopServices
 
