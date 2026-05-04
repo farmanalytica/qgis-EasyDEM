@@ -187,6 +187,7 @@ QTextBrowser#demInfo:focus {
 # Dialog class
 # ---------------------------------------------------------------------------
 
+
 class LimitedPopupComboBox(QComboBox):
     """ComboBox with a bounded popup height for long catalogs."""
 
@@ -205,13 +206,17 @@ class LimitedPopupComboBox(QComboBox):
         popup = view.window()
         row_height = max(view.sizeHintForRow(0), self.fontMetrics().height() + 4)
         visible_rows = min(self.maxVisibleItems(), self.count())
-        popup_height = min(self._popup_height, max(row_height * visible_rows + 2, row_height + 2))
+        popup_height = min(
+            self._popup_height, max(row_height * visible_rows + 2, row_height + 2)
+        )
         popup_width = self.width()
 
         top_left = self.mapToGlobal(self.rect().bottomLeft())
         parent_window = self.window()
         if parent_window:
-            bottom_limit = parent_window.mapToGlobal(parent_window.rect().bottomLeft()).y() - 8
+            bottom_limit = (
+                parent_window.mapToGlobal(parent_window.rect().bottomLeft()).y() - 8
+            )
             available_below = bottom_limit - top_left.y()
             if row_height * 4 <= available_below < popup_height:
                 popup_height = available_below
@@ -364,7 +369,9 @@ class EasyDemDialog(QDialog):
             }
         """)
         self.browser.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://farmanalytica.github.io/qgis-EasyDEM/"))
+            lambda: QDesktopServices.openUrl(
+                QUrl("https://farmanalytica.github.io/qgis-EasyDEM/")
+            )
         )
         lay.addWidget(self.browser)
 
@@ -423,7 +430,8 @@ class EasyDemDialog(QDialog):
             crop_top = int(raw.height() * 0.11)
             cropped = raw.copy(0, crop_top, raw.width(), raw.height() - crop_top)
             pix = cropped.scaled(
-                40, 40,
+                40,
+                40,
                 Qt.AspectRatioMode.IgnoreAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
@@ -446,15 +454,13 @@ class EasyDemDialog(QDialog):
 
         # Title
         title_lbl = QLabel("GEE Authentication")
-        title_lbl.setStyleSheet(
-            "color: #1a1a1a; font-size: 16px; font-weight: bold;"
-        )
+        title_lbl.setStyleSheet("color: #1a1a1a; font-size: 16px; font-weight: bold;")
         left_lay.addWidget(title_lbl)
 
         # Description
         desc_lbl = QLabel(
-            'EasyDEM uses <b>Google Earth Engine</b> for processing. '
-            'To continue, you will need authorized access.'
+            "EasyDEM uses <b>Google Earth Engine</b> for processing. "
+            "To continue, you will need authorized access."
         )
         desc_lbl.setWordWrap(True)
         desc_lbl.setTextFormat(Qt.TextFormat.RichText)
@@ -478,13 +484,11 @@ class EasyDemDialog(QDialog):
         info_icon = QLabel("ⓘ")
         info_icon.setFixedWidth(18)
         info_icon.setAlignment(Qt.AlignmentFlag.AlignTop)
-        info_icon.setStyleSheet(
-            "color: #2e7d32; font-size: 14px; font-weight: bold;"
-        )
+        info_icon.setStyleSheet("color: #2e7d32; font-size: 14px; font-weight: bold;")
         info_lay.addWidget(info_icon)
 
         info_text = QLabel(
-            'Requires an active GEE account and a Google Cloud Console project with the API enabled.'
+            "Requires an active GEE account and a Google Cloud Console project with the API enabled."
         )
         info_text.setWordWrap(True)
         info_text.setStyleSheet("color: #1b5e20; font-size: 10px;")
@@ -519,9 +523,7 @@ class EasyDemDialog(QDialog):
         # Project ID input — underline style, show password toggle
         self.project_id_input = QgsPasswordLineEdit()
         self.project_id_input.setEchoMode(QLineEdit.EchoMode.Normal)
-        self.project_id_input.setPlaceholderText(
-            "e.g. my-geospatial-project-42"
-        )
+        self.project_id_input.setPlaceholderText("e.g. my-geospatial-project-42")
         self.project_id_input.setFixedHeight(30)
         self.project_id_input.setStyleSheet("""
             QLineEdit {
@@ -632,12 +634,8 @@ class EasyDemDialog(QDialog):
         )
         dem_combo_view = QListView(self.dem_combo)
         dem_combo_view.setUniformItemSizes(True)
-        dem_combo_view.setVerticalScrollMode(
-            QListView.ScrollMode.ScrollPerItem
-        )
-        dem_combo_view.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
+        dem_combo_view.setVerticalScrollMode(QListView.ScrollMode.ScrollPerItem)
+        dem_combo_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.dem_combo.setView(dem_combo_view)
         panel_lay.addWidget(self.dem_combo)
 
@@ -668,6 +666,24 @@ class EasyDemDialog(QDialog):
         panel_lay.addLayout(action_row)
 
         outer.addWidget(panel)
+        self.dem_info.setMinimumHeight(120)
+
+        folder_layout = QHBoxLayout()
+        self.folder_input = QLineEdit()
+        self.folder_input.setPlaceholderText("Default Temporary Folder")
+        self.folder_input.setReadOnly(True)
+
+        self.btn_browse_folder = QPushButton("Browse...")
+
+        folder_layout.addWidget(QLabel("Download to:"))
+        folder_layout.addWidget(self.folder_input)
+        folder_layout.addWidget(self.btn_browse_folder)
+
+        outer.addWidget(self.layer_combo)
+        outer.addWidget(self.dem_combo)
+        outer.addWidget(self.dem_info)
+        outer.addLayout(folder_layout)
+        outer.addWidget(self.btn_download_dem)
 
     # -----------------------------------------------------------------------
     # FOOTER
@@ -703,7 +719,9 @@ class EasyDemDialog(QDialog):
         farm_icon.setFixedHeight(24)
         farm_icon.setStyleSheet("background: transparent;")
         _logo_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "assets", "farm_analytica_logo.svg"
+            os.path.dirname(os.path.abspath(__file__)),
+            "assets",
+            "farm_analytica_logo.svg",
         )
         if os.path.exists(_logo_path):
             _pix = QPixmap(_logo_path).scaledToHeight(
@@ -716,7 +734,9 @@ class EasyDemDialog(QDialog):
             farm_icon.setStyleSheet(
                 "color: #1b6b39; font-size: 10px; font-weight: bold;"
             )
-        farm_icon.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        farm_icon.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
         lay.addWidget(farm_icon)
 
         farm_text = QLabel()
@@ -724,13 +744,15 @@ class EasyDemDialog(QDialog):
         farm_text.setOpenExternalLinks(True)
         farm_text.setWordWrap(True)
         farm_text.setText(
-            'This is a free and open project, supported by '
+            "This is a free and open project, supported by "
             '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
             'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
-            'Get in touch for exclusive and personalized commercial solutions.'
+            "Get in touch for exclusive and personalized commercial solutions."
         )
         farm_text.setStyleSheet("color: #616161; font-size: 8px;")
-        farm_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        farm_text.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         lay.addWidget(farm_text)
 
         return footer
