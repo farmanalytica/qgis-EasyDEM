@@ -679,11 +679,11 @@ class EasyDemDialog(QDialog):
         folder_layout.addWidget(self.folder_input)
         folder_layout.addWidget(self.btn_browse_folder)
 
-        layout.addWidget(self.layer_combo)
-        layout.addWidget(self.dem_combo)
-        layout.addWidget(self.dem_info)
-        layout.addLayout(folder_layout)
-        layout.addWidget(self.btn_download_dem)
+        outer.addWidget(self.layer_combo)
+        outer.addWidget(self.dem_combo)
+        outer.addWidget(self.dem_info)
+        outer.addLayout(folder_layout)
+        outer.addWidget(self.btn_download_dem)
 
     # -----------------------------------------------------------------------
     # FOOTER
