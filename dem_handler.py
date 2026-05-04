@@ -15,6 +15,8 @@ from qgis.core import (
     QgsStyle,
     QgsLayerTreeLayer,
     QgsCoordinateTransform,
+    QgsSettings,
+    QFileDialog,
 )
 
 from qgis.PyQt.QtWidgets import QApplication
@@ -181,7 +183,6 @@ class DEMHandler:
 
     def handle_folder_selection(self):
         """Open a folder picker, persist the choice, and update the UI."""
-        from qgis.PyQt.QtWidgets import QFileDialog
 
         current_folder = self.load_download_folder()
 
@@ -197,14 +198,12 @@ class DEMHandler:
 
     def save_download_folder(self, folder_path):
         """Persist the chosen download folder in QGIS settings."""
-        from qgis.core import QgsSettings
 
         settings = QgsSettings()
         settings.setValue("qgis-EasyDEM/dem_download_folder", folder_path)
 
     def load_download_folder(self):
         """Return the previously saved download folder, or empty string."""
-        from qgis.core import QgsSettings
 
         settings = QgsSettings()
         return settings.value("qgis-EasyDEM/dem_download_folder", "", type=str)
