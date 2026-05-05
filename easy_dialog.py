@@ -278,7 +278,7 @@ class EasyDemDialog(QDialog):
             | Qt.WindowType.WindowCloseButtonHint
         )
         self.setWindowModality(Qt.WindowModality.NonModal)
-        self.setFixedSize(600, 400)
+        self.setFixedSize(800, 400)
         self.setStyleSheet(_STYLE_DIALOG)
 
         root = QVBoxLayout(self)
