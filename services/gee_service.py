@@ -21,6 +21,9 @@ class GEEService:
 
     SETTINGS_PROJECT_ID_KEY = "MyPlugin/projectID"
 
+    def __init__(self):
+        self.is_authenticated = False
+
     def get_saved_project_id(self) -> str:
         """
         Retrieve the saved GEE project ID from settings.
@@ -64,6 +67,7 @@ class GEEService:
             default_project_path = f"projects/{project_id}/assets/"
 
             ee.data.listAssets({"parent": default_project_path})
+            self.is_authenticated = True
 
         except ee.EEException as e:
             error_msg = str(e)
@@ -106,4 +110,5 @@ class GEEService:
         except Exception:
             pass
 
+        self.is_authenticated = False
         return "Earth Engine configuration cleared successfully."

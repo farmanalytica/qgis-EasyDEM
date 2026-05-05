@@ -168,6 +168,10 @@ class EasyDem:
                 self.dem_handler.on_dataset_changed
             )
 
+            self.dlg.btn_go_to_aoi.clicked.connect(
+                self.dem_handler.load_available_datasets
+            )
+
             self.dlg.btn_browse_folder.clicked.connect(
                 self.dem_handler.handle_folder_selection
             )
@@ -211,6 +215,8 @@ class EasyDem:
             layer = self.dlg.layer_combo.currentLayer()
             if layer:
                 self.dem_handler.handle_layer_changed(layer)
+            else:
+                self.dem_handler.load_available_datasets()
 
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")

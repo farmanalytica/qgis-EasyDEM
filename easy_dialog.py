@@ -568,6 +568,19 @@ class EasyDemDialog(QDialog):
         row.addWidget(card)
 
         outer.addLayout(row)
+
+        browse_row = QHBoxLayout()
+        browse_row.setContentsMargins(0, 10, 0, 0)
+
+        self.btn_go_to_aoi = QPushButton(
+            "Browse datasets without authenticating \u2192"
+        )
+        self.btn_go_to_aoi.clicked.connect(self.show_aoi_page)
+        browse_row.addStretch()
+        browse_row.addWidget(self.btn_go_to_aoi)
+        browse_row.addStretch()
+        outer.addLayout(browse_row)
+
         outer.addStretch(3)
 
     # -----------------------------------------------------------------------
