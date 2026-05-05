@@ -102,13 +102,15 @@ class DEMHandler:
             return
 
         output_folder = self.dlg.folder_input.text().strip() or None
+        buffer_m = self.dlg.buffer_slider.value()
+        aoi = self._apply_buffer(self.current_aoi, buffer_m)
 
         QApplication.setOverrideCursor(WAIT_CURSOR)
         QApplication.processEvents()
 
         try:
             dem_path = DEMService.download_dem(
-                self.current_aoi, dataset_name, output_folder=output_folder
+                aoi, dataset_name, output_folder=output_folder
             )
             DEMRenderer.load_dem_to_qgis(dem_path, dataset_name)
             interface.messageBar().pushMessage(
@@ -227,3 +229,19 @@ class DEMHandler:
         self.interface.messageBar().pushMessage(
             "EasyDEM", "Google Hybrid Layer loaded successfully"
         )
+
+    def _apply_buffer(self, aoi, buffer_distance: int):
+        """
+        Return a buffered copy of the AOI without mutating the original.
+
+        Args:
+            aoi: ee.FeatureCollection representing the current AOI.
+            buffer_distance: Buffer in metres.  Zero returns the original
+                object unchanged.
+
+        Returns:
+            ee.FeatureCollection — buffered when distance != 0, original otherwise.
+        """
+        if buffer_distance == 0:
+            return aoi
+        return aoi.map(lambda feature: feature.buffer(buffer_distance))
