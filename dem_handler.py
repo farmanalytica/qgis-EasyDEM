@@ -14,6 +14,7 @@ from qgis.core import (
 from qgis.PyQt.QtWidgets import QApplication, QFileDialog
 from qgis.PyQt.QtCore import Qt, QTimer
 
+
 try:
     from qgis.PyQt.QtCore import Qt
 
@@ -29,6 +30,7 @@ from .services.dem_service import DEMService
 from .services.dem_renderer import DEMRenderer
 from .services.dataset_manager import DatasetManager
 from .services.settings_manager import SettingsManager
+from .services.dem_registry import DEMRegistry
 
 
 class DEMHandler:
@@ -79,6 +81,15 @@ class DEMHandler:
         Args:
             interface: The QGIS interface instance for message bar.
         """
+
+        if not self.gee_service.is_authenticated:
+            self.dlg.pop_message(
+                "Authentication is required to download DEM data. "
+                "Please go to the Auth page and validate your Google Cloud project ID.",
+                "warning",
+            )
+            return
+
         if not self.current_aoi:
             self.dlg.pop_message(
                 "No AOI selected. Please select a layer first.", "warning"
@@ -156,13 +167,41 @@ class DEMHandler:
             self.dlg.pop_message(str(e), "warning")
 
     def load_available_datasets(self):
-        """Load available datasets in the combobox based on current AOI."""
-        DatasetManager.load_available_datasets(
-            self.dlg.dem_combo,
-            self.current_aoi,
-            self.current_aoi_bbox,
-            on_error=lambda msg: self.dlg.pop_message(msg, "warning"),
-        )
+        """Load available datasets in the combobox based on current AOI.
+
+        When the user is not authenticated, all datasets from the catalog are
+        listed without any GEE availability check.  When authenticated, only
+        datasets that intersect the current AOI are shown.
+        """
+        registry = DEMRegistry()
+        self.dlg.dem_combo.clear()
+
+        if not self.gee_service.is_authenticated:
+            for dataset in registry.list_datasets():
+                self.dlg.dem_combo.addItem(dataset.name, dataset.name)
+            return
+
+        if not self.current_aoi:
+            return
+
+        try:
+            WAIT_CURSOR = Qt.CursorShape.WaitCursor
+        except AttributeError:
+            WAIT_CURSOR = Qt.WaitCursor
+        QApplication.setOverrideCursor(WAIT_CURSOR)
+        QApplication.processEvents()
+
+        try:
+            geometry = self.current_aoi.geometry()
+
+            for dataset in registry.list_datasets():
+                QApplication.processEvents()
+                if registry.is_available(
+                    dataset.name, geometry, aoi_bbox=self.current_aoi_bbox
+                ):
+                    self.dlg.dem_combo.addItem(dataset.name, dataset.name)
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def handle_folder_selection(self):
         """Open a folder picker, persist the choice, and update the UI."""
