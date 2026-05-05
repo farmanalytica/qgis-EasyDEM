@@ -34,6 +34,7 @@ from qgis.PyQt.QtWidgets import (
     QTextBrowser,
     QFrame,
     QSizePolicy,
+    QSlider,
 )
 from qgis.PyQt.QtGui import QPixmap, QDesktopServices
 
@@ -657,6 +658,43 @@ class EasyDemDialog(QDialog):
         self.dem_info.setOpenExternalLinks(True)
         self.dem_info.setMinimumHeight(96)
         panel_lay.addWidget(self.dem_info, 1)
+
+        buffer_lbl = QLabel("AOI BUFFER")
+        buffer_lbl.setObjectName("aoiFieldLabel")
+        panel_lay.addWidget(buffer_lbl)
+
+        buffer_row = QHBoxLayout()
+        buffer_row.setContentsMargins(0, 0, 0, 0)
+        buffer_row.setSpacing(8)
+
+        minus_lbl = QLabel("−300 m")
+        minus_lbl.setStyleSheet("color: #9e9e9e; font-size: 9px;")
+        buffer_row.addWidget(minus_lbl)
+
+        self.buffer_slider = QSlider(Qt.Orientation.Horizontal)
+        self.buffer_slider.setMinimum(-300)
+        self.buffer_slider.setMaximum(300)
+        self.buffer_slider.setValue(0)
+        self.buffer_slider.setTickInterval(100)
+        self.buffer_slider.setTickPosition(QSlider.TickPosition.NoTicks)
+        buffer_row.addWidget(self.buffer_slider, 1)
+
+        plus_lbl = QLabel("+300 m")
+        plus_lbl.setStyleSheet("color: #9e9e9e; font-size: 9px;")
+        buffer_row.addWidget(plus_lbl)
+
+        panel_lay.addLayout(buffer_row)
+
+        self.buffer_value_lbl = QLabel("Buffer: 0 m")
+        self.buffer_value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.buffer_value_lbl.setStyleSheet("color: #616161; font-size: 10px;")
+        panel_lay.addWidget(self.buffer_value_lbl)
+
+        self.buffer_slider.valueChanged.connect(
+            lambda v: self.buffer_value_lbl.setText(
+                f"Buffer: {v:+d} m" if v != 0 else "Buffer: 0 m"
+            )
+        )
 
         action_row = QHBoxLayout()
         action_row.setContentsMargins(0, 0, 0, 0)
