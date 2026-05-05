@@ -34,6 +34,12 @@ from qgis.PyQt.QtWidgets import (
     QStackedWidget,
     QVBoxLayout,
     QWidget,
+    QComboBox,
+    QListView,
+    QTextBrowser,
+    QFrame,
+    QSizePolicy,
+    QSlider,
 )
 
 from .view.auth import setup_auth_page
@@ -44,6 +50,45 @@ from .view.styles import STYLE_DIALOG
 # ---------------------------------------------------------------------------
 # Dialog class
 # ---------------------------------------------------------------------------
+
+
+class LimitedPopupComboBox(QComboBox):
+    """ComboBox with a bounded popup height for long catalogs."""
+
+    def __init__(self, parent=None, popup_height=170):
+        super().__init__(parent)
+        self._popup_height = popup_height
+
+    def showPopup(self):
+        view = self.view()
+        view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        super().showPopup()
+        QTimer.singleShot(0, self._resize_popup)
+
+    def _resize_popup(self):
+        view = self.view()
+        popup = view.window()
+        row_height = max(view.sizeHintForRow(0), self.fontMetrics().height() + 4)
+        visible_rows = min(self.maxVisibleItems(), self.count())
+        popup_height = min(
+            self._popup_height, max(row_height * visible_rows + 2, row_height + 2)
+        )
+        popup_width = self.width()
+
+        top_left = self.mapToGlobal(self.rect().bottomLeft())
+        parent_window = self.window()
+        if parent_window:
+            bottom_limit = (
+                parent_window.mapToGlobal(parent_window.rect().bottomLeft()).y() - 8
+            )
+            available_below = bottom_limit - top_left.y()
+            if row_height * 4 <= available_below < popup_height:
+                popup_height = available_below
+
+        popup.setFixedSize(popup_width, popup_height)
+        popup.move(top_left)
+        view.setGeometry(0, 0, popup_width, popup_height)
+
 
 class EasyDemDialog(QDialog):
     """
@@ -105,7 +150,7 @@ class EasyDemDialog(QDialog):
         )
         self.setWindowModality(Qt.WindowModality.NonModal)
         self.setFixedSize(800, 400)
-        self.setStyleSheet(STYLE_DIALOG)
+        self.setStyleSheet(_STYLE_DIALOG)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -209,6 +254,367 @@ class EasyDemDialog(QDialog):
         return header
 
     # -----------------------------------------------------------------------
+    # STEP 1 — Authentication
+    # -----------------------------------------------------------------------
+
+    def _setup_auth_page(self):
+        """
+        Populate ``auth_page`` with the authentication layout.
+
+        The layout is a two-column row centred vertically on the page:
+
+        - **Left column** (200 px fixed): plugin icon + caption, title label,
+          plain-text description, and an info box explaining GEE prerequisites.
+        - **Right card** (260 px fixed, white rounded card): a ``project_id_input``
+          field for the Google Cloud project ID, a ``btn_authenticate`` primary
+          action button, and a ``btn_reset_auth`` discrete reset link.
+
+        All three interactive widgets (``project_id_input``, ``btn_authenticate``,
+        ``btn_reset_auth``) are connected to handlers externally by ``easy.py``.
+        """
+
+        page = self.auth_page
+        page.setStyleSheet("background-color: #f5f5f5;")
+
+        outer = QVBoxLayout(page)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+        outer.addStretch(2)
+
+        row = QHBoxLayout()
+        row.setContentsMargins(24, 0, 24, 0)
+        row.setSpacing(20)
+
+        # ── Left column ───────────────────────────────────────────────────
+        left = QWidget()
+        left.setFixedWidth(200)
+        left.setStyleSheet("background: transparent;")
+        left_lay = QVBoxLayout(left)
+        left_lay.setContentsMargins(0, 0, 0, 0)
+        left_lay.setSpacing(10)
+
+        # Plugin icon + caption
+        logo_col = QVBoxLayout()
+        logo_col.setSpacing(4)
+        logo_col.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+        icon_lbl = QLabel()
+        icon_lbl.setFixedSize(50, 40)
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
+        if os.path.exists(icon_path):
+            raw = QPixmap(icon_path)
+            crop_top = int(raw.height() * 0.11)
+            cropped = raw.copy(0, crop_top, raw.width(), raw.height() - crop_top)
+            pix = cropped.scaled(
+                40,
+                40,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            icon_lbl.setPixmap(pix)
+        else:
+            icon_lbl.setText("🗺")
+            icon_lbl.setStyleSheet("font-size: 28px;")
+        icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_lbl.setStyleSheet("background: transparent; border: none;")
+        logo_col.addWidget(icon_lbl)
+
+        icon_caption = QLabel("EasyDEM")
+        icon_caption.setFixedWidth(50)
+        icon_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_caption.setStyleSheet(
+            "color: #9e9e9e; font-size: 9px; letter-spacing: 0.5px;"
+        )
+        logo_col.addWidget(icon_caption)
+        left_lay.addLayout(logo_col)
+
+        # Title
+        title_lbl = QLabel("GEE Authentication")
+        title_lbl.setStyleSheet("color: #1a1a1a; font-size: 16px; font-weight: bold;")
+        left_lay.addWidget(title_lbl)
+
+        # Description
+        desc_lbl = QLabel(
+            "EasyDEM uses <b>Google Earth Engine</b> for processing. "
+            "To continue, you will need authorized access."
+        )
+        desc_lbl.setWordWrap(True)
+        desc_lbl.setTextFormat(Qt.TextFormat.RichText)
+        desc_lbl.setStyleSheet("color: #616161; font-size: 11px;")
+        left_lay.addWidget(desc_lbl)
+
+        # Info box — green left border, light green background
+        info_frame = QFrame()
+        info_frame.setStyleSheet("""
+            QFrame {
+                background-color: #e8f5e9;
+                border-left: 3px solid #43a047;
+                border-radius: 4px;
+            }
+            QLabel { background: transparent; border: none; }
+        """)
+        info_lay = QHBoxLayout(info_frame)
+        info_lay.setContentsMargins(12, 10, 12, 10)
+        info_lay.setSpacing(8)
+
+        info_icon = QLabel("ⓘ")
+        info_icon.setFixedWidth(18)
+        info_icon.setAlignment(Qt.AlignmentFlag.AlignTop)
+        info_icon.setStyleSheet("color: #2e7d32; font-size: 14px; font-weight: bold;")
+        info_lay.addWidget(info_icon)
+
+        info_text = QLabel(
+            "Requires an active GEE account and a Google Cloud Console project with the API enabled."
+        )
+        info_text.setWordWrap(True)
+        info_text.setStyleSheet("color: #1b5e20; font-size: 10px;")
+        info_lay.addWidget(info_text, 1)
+
+        left_lay.addWidget(info_frame)
+        left_lay.addStretch()
+        row.addWidget(left)
+
+        # ── Right card ────────────────────────────────────────────────────
+        card = QFrame()
+        card.setFixedWidth(260)
+        card.setStyleSheet("""
+            QFrame {
+                background-color: #ffffff;
+                border: 1px solid #e0e0e0;
+                border-radius: 12px;
+            }
+            QLabel { background: transparent; border: none; }
+        """)
+        card_lay = QVBoxLayout(card)
+        card_lay.setContentsMargins(20, 20, 20, 20)
+        card_lay.setSpacing(7)
+
+        # Label
+        pid_lbl = QLabel("PROJECT ID (GOOGLE CLOUD)")
+        pid_lbl.setStyleSheet(
+            "color: #9e9e9e; font-size: 10px; letter-spacing: 1px; font-weight: bold;"
+        )
+        card_lay.addWidget(pid_lbl)
+
+        # Project ID input — underline style, show password toggle
+        self.project_id_input = QgsPasswordLineEdit()
+        self.project_id_input.setEchoMode(QLineEdit.EchoMode.Normal)
+        self.project_id_input.setPlaceholderText("e.g. my-geospatial-project-42")
+        self.project_id_input.setFixedHeight(30)
+        self.project_id_input.setStyleSheet("""
+            QLineEdit {
+                background-color: transparent;
+                color: #212121;
+                border: none;
+                border-bottom: 1.5px solid #d0d0d0;
+                border-radius: 0;
+                padding: 2px 0 6px 0;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border-bottom: 2px solid #1b6b39;
+            }
+        """)
+        card_lay.addWidget(self.project_id_input)
+
+        card_lay.addSpacing(3)
+
+        # Authenticate button
+        self.btn_authenticate = QPushButton("🔑   Validate ID")
+        self.btn_authenticate.setFixedHeight(34)
+        self.btn_authenticate.setStyleSheet(_STYLE_BTN_PRIMARY)
+        card_lay.addWidget(self.btn_authenticate)
+
+        card_lay.addSpacing(2)
+
+        # Reset button — small, discrete
+        self.btn_reset_auth = QPushButton("Reset authentication")
+        self.btn_reset_auth.setFixedHeight(20)
+        self.btn_reset_auth.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #bdbdbd;
+                border: none;
+                font-size: 10px;
+            }
+            QPushButton:hover { color: #c62828; }
+        """)
+        card_lay.addWidget(self.btn_reset_auth, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        row.addWidget(card)
+
+        outer.addLayout(row)
+
+        browse_row = QHBoxLayout()
+        browse_row.setContentsMargins(0, 10, 0, 0)
+
+        self.btn_go_to_aoi = QPushButton(
+            "Browse datasets without authenticating \u2192"
+        )
+        self.btn_go_to_aoi.clicked.connect(self.show_aoi_page)
+        browse_row.addStretch()
+        browse_row.addWidget(self.btn_go_to_aoi)
+        browse_row.addStretch()
+        outer.addLayout(browse_row)
+
+        outer.addStretch(3)
+
+    # -----------------------------------------------------------------------
+    # STEP 2 — AOI (unchanged)
+    # -----------------------------------------------------------------------
+
+    def _setup_aoi_page(self):
+        """Set up the AOI page with a polygon layer selector and load button."""
+        page = self.aoi_page
+        page.setObjectName("aoiPage")
+        page.setStyleSheet(_STYLE_AOI_PAGE)
+
+        outer = QVBoxLayout(page)
+        outer.setContentsMargins(14, 10, 14, 10)
+        outer.setSpacing(0)
+
+        panel = QFrame()
+        panel.setObjectName("aoiPanel")
+        panel_lay = QVBoxLayout(panel)
+        panel_lay.setContentsMargins(16, 12, 16, 12)
+        panel_lay.setSpacing(6)
+
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(8)
+
+        title_col = QVBoxLayout()
+        title_col.setContentsMargins(0, 0, 0, 0)
+        title_col.setSpacing(1)
+
+        title_lbl = QLabel("AOI and DEM inputs")
+        title_lbl.setObjectName("aoiTitle")
+        title_col.addWidget(title_lbl)
+
+        subtitle_lbl = QLabel("Select the polygon layer and elevation dataset.")
+        subtitle_lbl.setObjectName("aoiSubtitle")
+        title_col.addWidget(subtitle_lbl)
+
+        title_row.addLayout(title_col, 1)
+
+        panel_lay.addLayout(title_row)
+
+        layer_lbl = QLabel("AOI LAYER")
+        layer_lbl.setObjectName("aoiFieldLabel")
+        panel_lay.addWidget(layer_lbl)
+
+        self.layer_combo = QgsMapLayerComboBox()
+        self.layer_combo.setObjectName("layerCombo")
+        self.layer_combo.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.layer_combo.setFixedHeight(28)
+        panel_lay.addWidget(self.layer_combo)
+
+        dem_lbl = QLabel("DEM DATASET")
+        dem_lbl.setObjectName("aoiFieldLabel")
+        panel_lay.addWidget(dem_lbl)
+
+        self.dem_combo = LimitedPopupComboBox(popup_height=170)
+        self.dem_combo.setObjectName("demCombo")
+        self.dem_combo.setFixedHeight(28)
+        self.dem_combo.setMaxVisibleItems(10)
+        self.dem_combo.setMinimumContentsLength(28)
+        self.dem_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        dem_combo_view = QListView(self.dem_combo)
+        dem_combo_view.setUniformItemSizes(True)
+        dem_combo_view.setVerticalScrollMode(QListView.ScrollMode.ScrollPerItem)
+        dem_combo_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.dem_combo.setView(dem_combo_view)
+        panel_lay.addWidget(self.dem_combo)
+
+        self.dem_info = QTextBrowser()
+        self.dem_info.setObjectName("demInfo")
+        self.dem_info.setOpenExternalLinks(True)
+        self.dem_info.setMinimumHeight(96)
+        panel_lay.addWidget(self.dem_info, 1)
+
+        buffer_lbl = QLabel("AOI BUFFER")
+        buffer_lbl.setObjectName("aoiFieldLabel")
+        panel_lay.addWidget(buffer_lbl)
+
+        buffer_row = QHBoxLayout()
+        buffer_row.setContentsMargins(0, 0, 0, 0)
+        buffer_row.setSpacing(8)
+
+        minus_lbl = QLabel("−300 m")
+        minus_lbl.setStyleSheet("color: #9e9e9e; font-size: 9px;")
+        buffer_row.addWidget(minus_lbl)
+
+        self.buffer_slider = QSlider(Qt.Orientation.Horizontal)
+        self.buffer_slider.setMinimum(-300)
+        self.buffer_slider.setMaximum(300)
+        self.buffer_slider.setValue(0)
+        self.buffer_slider.setTickInterval(100)
+        self.buffer_slider.setTickPosition(QSlider.TickPosition.NoTicks)
+        buffer_row.addWidget(self.buffer_slider, 1)
+
+        plus_lbl = QLabel("+300 m")
+        plus_lbl.setStyleSheet("color: #9e9e9e; font-size: 9px;")
+        buffer_row.addWidget(plus_lbl)
+
+        panel_lay.addLayout(buffer_row)
+
+        self.buffer_value_lbl = QLabel("Buffer: 0 m")
+        self.buffer_value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.buffer_value_lbl.setStyleSheet("color: #616161; font-size: 10px;")
+        panel_lay.addWidget(self.buffer_value_lbl)
+
+        self.buffer_slider.valueChanged.connect(
+            lambda v: self.buffer_value_lbl.setText(
+                f"Buffer: {v:+d} m" if v != 0 else "Buffer: 0 m"
+            )
+        )
+
+        action_row = QHBoxLayout()
+        action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.setSpacing(8)
+
+        self.btn_back_auth = QPushButton("Authentication Screen")
+        self.btn_back_auth.setFixedSize(140, 30)
+        self.btn_back_auth.setToolTip("Return to GEE authentication")
+        self.btn_back_auth.setStyleSheet(_STYLE_BTN_SECONDARY)
+        self.btn_back_auth.clicked.connect(self.show_auth_page)
+        action_row.addWidget(self.btn_back_auth, 0, Qt.AlignmentFlag.AlignLeft)
+
+        action_row.addStretch(1)
+
+        self.btn_download_dem = QPushButton("Download DEM")
+        self.btn_download_dem.setFixedSize(140, 30)
+        self.btn_download_dem.setStyleSheet(_STYLE_BTN_PRIMARY)
+        action_row.addWidget(self.btn_download_dem, 0, Qt.AlignmentFlag.AlignRight)
+
+        panel_lay.addLayout(action_row)
+
+        outer.addWidget(panel)
+        self.dem_info.setMinimumHeight(120)
+
+        folder_layout = QHBoxLayout()
+        self.folder_input = QLineEdit()
+        self.folder_input.setPlaceholderText("Default Temporary Folder")
+        self.folder_input.setReadOnly(True)
+
+        self.btn_browse_folder = QPushButton("Browse...")
+
+        folder_layout.addWidget(QLabel("Download to:"))
+        folder_layout.addWidget(self.folder_input)
+        folder_layout.addWidget(self.btn_browse_folder)
+
+        self.btn_hybrid_layer = QPushButton("Add Google Hybrid Layer")
+
+        outer.addWidget(self.layer_combo)
+        outer.addWidget(self.dem_combo)
+        outer.addWidget(self.dem_info)
+        outer.addLayout(folder_layout)
+        outer.addWidget(self.btn_download_dem)
+        outer.addWidget(self.btn_hybrid_layer)
+
+    # -----------------------------------------------------------------------
     # FOOTER
     # -----------------------------------------------------------------------
 
@@ -240,7 +646,7 @@ class EasyDemDialog(QDialog):
         farm_icon = QLabel()
         farm_icon.setFixedHeight(24)
         farm_icon.setStyleSheet("background: transparent;")
-        logo_path = os.path.join(
+        _logo_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "assets",
             "farm_analytica_logo.svg",
@@ -256,7 +662,9 @@ class EasyDemDialog(QDialog):
             farm_icon.setStyleSheet(
                 "color: #1b6b39; font-size: 10px; font-weight: bold;"
             )
-        farm_icon.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        farm_icon.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
         lay.addWidget(farm_icon)
 
         # Attribution copy with an external link to the FARM Analytica website.
@@ -271,7 +679,9 @@ class EasyDemDialog(QDialog):
             "Get in touch for exclusive and personalized commercial solutions."
         )
         farm_text.setStyleSheet("color: #616161; font-size: 8px;")
-        farm_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        farm_text.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         lay.addWidget(farm_text)
 
         return footer

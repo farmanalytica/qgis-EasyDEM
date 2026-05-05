@@ -22,7 +22,7 @@ qgis-EasyDEM/
 ├── __init__.py          # QGIS entry point — registers the plugin via classFactory()
 ├── easy.py              # Plugin controller — owns the QGIS lifecycle (initGui, unload, run)
 ├── easy_dialog.py       # UI layer — dialog window and widget definitions
-├── dem_handler.py       # DEM handler — bridges dialog events to DEM services and QGIS rendering
+├── dem_handler.py       # DEM orchestration — coordinates AOI management and service calls
 ├── resources.py         # Compiled Qt resources (icons, etc.)
 ├── pavement.py          # Build/dev task automation (paver)
 ├── assets/
@@ -32,7 +32,11 @@ qgis-EasyDEM/
     ├── gee_service.py   # Google Earth Engine business logic
     ├── aoi_service.py   # AOI extraction and conversion to EE objects
     ├── dem_service.py   # Downloads DEM GeoTIFF from Google Earth Engine
-    └── dem_registry.py  # Loads and queries the DEM catalog; checks dataset availability
+    ├── dem_registry.py  # Loads and queries the DEM catalog; checks dataset availability
+    ├── dem_renderer.py  # Color ramp rendering and raster layer styling
+    ├── dataset_manager.py   # Dataset availability queries and UI updates
+    ├── settings_manager.py  # Settings persistence (QgsSettings)
+    └── map_utils.py     # Map-related utility functions
 ```
 
 ---
@@ -63,13 +67,15 @@ Current widgets:
 | QPushButton | `btn_download_dem` | aoi | Downloads and loads the selected DEM into QGIS |
 
 ### `dem_handler.py` — DEM Handler
-Contains `DEMHandler`. Bridges dialog events to the DEM services and owns the QGIS rendering pipeline. It holds the current AOI state and coordinates calls between `AOIService`, `DEMRegistry`, and `DEMService`. Requires the QGIS `interface` (`iface`) at construction for map canvas access.
+Contains `DEMHandler`. Orchestrates DEM operations and coordinates between services. Owns the current AOI state and QGIS map canvas interactions. Delegates rendering, dataset management, and settings persistence to specialized services.
 
 | Method | Signature | Purpose |
 |---|---|---|
 | `handle_layer_changed` | `(layer)` | Zooms the map canvas to the selected layer, then updates the stored AOI and refreshes the dataset combobox |
-| `load_available_datasets` | `()` | Queries `DEMRegistry` for datasets available in the current AOI and populates `dem_combo` |
-| `handle_dem_service` | `(interface)` | Downloads the selected DEM and loads it into QGIS with a Magma color ramp |
+| `load_available_datasets` | `()` | Delegates to `DatasetManager` to query available datasets in the current AOI |
+| `handle_dem_service` | `(interface)` | Downloads the selected DEM and delegates to `DEMRenderer` to load and style it in QGIS |
+| `handle_folder_selection` | `()` | Opens a folder picker and delegates to `SettingsManager` to persist the choice |
+| `on_dataset_changed` | `()` | Delegates to `DatasetManager` to update the dataset info panel |
 
 ### `services/gee_service.py` — GEE Service
 Contains `GEEService`. Imports `ee` and owns all Earth Engine SDK calls.
@@ -104,6 +110,30 @@ Contains `DEMDataset` and `DEMRegistry`. Loads dataset definitions from `assets/
 | `get_image` | `(name: str)` | Returns the `ee.Image` for the given dataset |
 | `is_available` | `(name: str, region, aoi_bbox=None)` | Checks whether the dataset has EE coverage over the given geometry; pass pre-computed `aoi_bbox` to skip the remote GEE bounds call |
 
+### `services/dem_renderer.py` — DEM Renderer
+Contains `DEMRenderer`. Handles color ramp creation and raster layer styling for DEM visualization.
+
+| Method | Signature | Purpose |
+|---|---|---|
+| `build_color_renderer` | `(provider, min_val, max_val)` | Creates a `QgsSingleBandPseudoColorRenderer` with a Magma color ramp for the given value range |
+| `load_dem_to_qgis` | `(path: str, dataset_name: str)` | Loads a DEM GeoTIFF into QGIS, applies the color renderer, and adds it to the layer tree at the top |
+
+### `services/dataset_manager.py` — Dataset Manager
+Contains `DatasetManager`. Manages dataset availability queries and UI updates for the dataset combobox and info panel.
+
+| Method | Signature | Purpose |
+|---|---|---|
+| `load_available_datasets` | `(dem_combo, current_aoi, current_aoi_bbox, on_error=None)` | Queries `DEMRegistry` for available datasets and populates the given combobox; executes with a wait cursor |
+| `update_dataset_info` | `(dem_combo, dem_info_widget)` | Updates the dataset info panel when a different dataset is selected in the combobox |
+
+### `services/settings_manager.py` — Settings Manager
+Contains `SettingsManager`. Handles persistence of user preferences in QGIS settings.
+
+| Method | Signature | Purpose |
+|---|---|---|
+| `save_download_folder` | `(folder_path: str)` | Persists the chosen DEM download folder in `QgsSettings` |
+| `load_download_folder` | `()` | Returns the previously saved download folder, or an empty string if not set |
+
 ---
 
 ## Adding a New Feature
@@ -128,7 +158,10 @@ If you are an AI assistant working on this codebase, read this before making cha
 **Where things live:**
 - New widgets → `easy_dialog.py` (`_setup_ui`)
 - New signal connections → `easy.py` (inside the `if self.first_start` block in `run()`)
-- New DEM handler logic (layer events, rendering) → `dem_handler.py`
+- New DEM handler/orchestration logic → `dem_handler.py`
+- New rendering/styling logic → `services/dem_renderer.py`
+- New dataset management logic → `services/dataset_manager.py`
+- New settings persistence logic → `services/settings_manager.py`
 - New GEE logic → `services/gee_service.py`
 - New AOI/geometry logic → `services/aoi_service.py`
 - New DEM download logic → `services/dem_service.py`
@@ -163,12 +196,11 @@ git clone https://github.com/farmanalytica/qgis-EasyDEM
 
 **Install dependencies**
 
-```bash
-cd qgis-EasyDEM
-paver setup
-```
-
-This installs all required packages directly into the QGIS Python environment.  No separate virtual environment is needed.
+| Command | Description |
+|---|---|
+| `python -m paver` | Default — installs dependencies into `extlibs/` (alias for `build_extlibs`) |
+| `python -m paver build_extlibs` | Vendors all `requirements.txt` packages into `extlibs/` via `pip --target` |
+| `python -m paver clean_extlibs` | Removpaveres the `extlibs/` directory |
 
 **Hot-reload during development**
 

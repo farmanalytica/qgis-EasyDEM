@@ -22,10 +22,6 @@
  ***************************************************************************/
 """
 
-# cursor de carregamento
-# otimizar tempo de carregamento
-# verificar carregamento de áreas (gee learning)
-
 import re
 import os.path
 
@@ -40,7 +36,7 @@ from .resources import *
 from .easy_dialog import EasyDemDialog
 from .dem_handler import DEMHandler
 from .services.gee_service import GEEService
-from .services.dem_registry import DEMRegistry
+from .services.settings_manager import SettingsManager
 
 
 class EasyDem:
@@ -168,10 +164,28 @@ class EasyDem:
                 self.dem_handler.handle_layer_changed
             )
 
-            self.dlg.dem_combo.currentIndexChanged.connect(self._on_dataset_changed)
+            self.dlg.dem_combo.currentIndexChanged.connect(
+                self.dem_handler.on_dataset_changed
+            )
+
+            self.dlg.btn_go_to_aoi.clicked.connect(
+                self.dem_handler.load_available_datasets
+            )
+
+            self.dlg.btn_browse_folder.clicked.connect(
+                self.dem_handler.handle_folder_selection
+            )
+
+            self.dlg.btn_hybrid_layer.clicked.connect(
+                self.dem_handler.handle_hybrid_layer
+            )
+
+            saved_folder = SettingsManager.load_download_folder()
+            if saved_folder:
+                self.dlg.folder_input.setText(saved_folder)
 
         self.dlg.show()
-        result = self.dlg.exec() if hasattr(self.dlg, 'exec') else self.dlg.exec_()
+        result = self.dlg.exec() if hasattr(self.dlg, "exec") else self.dlg.exec_()
         if result:
             pass
 
@@ -201,6 +215,8 @@ class EasyDem:
             layer = self.dlg.layer_combo.currentLayer()
             if layer:
                 self.dem_handler.handle_layer_changed(layer)
+            else:
+                self.dem_handler.load_available_datasets()
 
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")
@@ -213,15 +229,3 @@ class EasyDem:
                 self.dlg.pop_message(msg, "info")
         except (FileNotFoundError, RuntimeError, OSError) as e:
             self.dlg.pop_message(str(e), "warning")
-
-    def _on_dataset_changed(self):
-        """Loads new dataset info when dataset is changed"""
-        dataset_name = self.dlg.dem_combo.currentData()
-        if not dataset_name:
-            self.dlg.dem_info.clear()
-            return
-
-        registry = DEMRegistry()
-        dataset = registry.get_dataset(dataset_name)
-
-        self.dlg.dem_info.setHtml(dataset.info)
