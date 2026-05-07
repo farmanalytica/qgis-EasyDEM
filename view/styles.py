@@ -155,3 +155,22 @@ QTextBrowser#demInfo:focus {
     border-color: #1b6b39;
 }
 """
+
+# ---------------------------------------------------------------------------
+# Help button — circular "?" in the dialog header
+# ---------------------------------------------------------------------------
+STYLE_BTN_HELP = """
+QPushButton {
+    background-color: transparent;
+    color: #9e9e9e;
+    border: 1.5px solid #d0d0d0;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #f5f5f5;
+    color: #424242;
+    border-color: #bdbdbd;
+}
+"""
