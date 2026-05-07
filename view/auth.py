@@ -1,0 +1,229 @@
+# -*- coding: utf-8 -*-
+"""
+Authentication page for the EasyDEM dialog.
+
+Builds the first workflow page: Google Earth Engine project configuration,
+authentication controls, and a shortcut to browse datasets without
+authenticating.  Signal connections are wired externally by ``easy.py``.
+"""
+
+import os
+
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QPixmap
+from qgis.PyQt.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+from qgis.gui import QgsPasswordLineEdit
+
+from .styles import STYLE_BTN_PRIMARY
+
+
+# ---------------------------------------------------------------------------
+# STEP 1 — Authentication
+# ---------------------------------------------------------------------------
+
+def setup_auth_page(dialog, page):
+    """
+    Populate the authentication page.
+
+    The layout is a two-column row centred vertically on the page:
+
+    - **Left column** (200 px fixed): plugin icon + caption, title label,
+      plain-text description, and an info box explaining GEE prerequisites.
+    - **Right card** (260 px fixed, white rounded card): a ``project_id_input``
+      field for the Google Cloud project ID, a ``btn_authenticate`` primary
+      action button, and a ``btn_reset_auth`` discrete reset link.
+    - **Below the row**: a ``btn_go_to_aoi`` shortcut that skips authentication
+      and navigates directly to the AOI page.
+
+    All interactive widgets are exposed on ``dialog`` so ``easy.py`` can wire
+    signal connections without importing this module's internals.
+    """
+    page.setStyleSheet("background-color: #f5f5f5;")
+
+    outer = QVBoxLayout(page)
+    outer.setContentsMargins(0, 0, 0, 0)
+    outer.setSpacing(0)
+    outer.addStretch(2)
+
+    row = QHBoxLayout()
+    row.setContentsMargins(24, 0, 24, 0)
+    row.setSpacing(20)
+
+    # ── Left column ───────────────────────────────────────────────────────
+    left = QWidget()
+    left.setFixedWidth(200)
+    left.setStyleSheet("background: transparent;")
+    left_lay = QVBoxLayout(left)
+    left_lay.setContentsMargins(0, 0, 0, 0)
+    left_lay.setSpacing(10)
+
+    # Plugin icon + caption — cropped to remove top whitespace in the PNG.
+    logo_col = QVBoxLayout()
+    logo_col.setSpacing(4)
+    logo_col.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+    icon_lbl = QLabel()
+    icon_lbl.setFixedSize(50, 40)
+    plugin_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    icon_path = os.path.join(plugin_dir, "icon.png")
+    if os.path.exists(icon_path):
+        raw = QPixmap(icon_path)
+        crop_top = int(raw.height() * 0.11)
+        cropped = raw.copy(0, crop_top, raw.width(), raw.height() - crop_top)
+        pix = cropped.scaled(
+            40, 40,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        icon_lbl.setPixmap(pix)
+    else:
+        icon_lbl.setText("\U0001f5fa")
+        icon_lbl.setStyleSheet("font-size: 28px;")
+    icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    icon_lbl.setStyleSheet("background: transparent; border: none;")
+    logo_col.addWidget(icon_lbl)
+
+    icon_caption = QLabel("EasyDEM")
+    icon_caption.setFixedWidth(50)
+    icon_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    icon_caption.setStyleSheet("color: #9e9e9e; font-size: 9px; letter-spacing: 0.5px;")
+    logo_col.addWidget(icon_caption)
+    left_lay.addLayout(logo_col)
+
+    # Page title.
+    title_lbl = QLabel("GEE Authentication")
+    title_lbl.setStyleSheet("color: #1a1a1a; font-size: 16px; font-weight: bold;")
+    left_lay.addWidget(title_lbl)
+
+    # Short explanation of why authentication is required.
+    desc_lbl = QLabel(
+        "EasyDEM uses <b>Google Earth Engine</b> for processing. "
+        "To continue, you will need authorized access."
+    )
+    desc_lbl.setWordWrap(True)
+    desc_lbl.setTextFormat(Qt.TextFormat.RichText)
+    desc_lbl.setStyleSheet("color: #616161; font-size: 11px;")
+    left_lay.addWidget(desc_lbl)
+
+    # Info box — green left border highlights the prerequisite note.
+    info_frame = QFrame()
+    info_frame.setStyleSheet("""
+        QFrame {
+            background-color: #e8f5e9;
+            border-left: 3px solid #43a047;
+            border-radius: 4px;
+        }
+        QLabel { background: transparent; border: none; }
+    """)
+    info_lay = QHBoxLayout(info_frame)
+    info_lay.setContentsMargins(12, 10, 12, 10)
+    info_lay.setSpacing(8)
+
+    info_icon = QLabel("ⓘ")
+    info_icon.setFixedWidth(18)
+    info_icon.setAlignment(Qt.AlignmentFlag.AlignTop)
+    info_icon.setStyleSheet("color: #2e7d32; font-size: 14px; font-weight: bold;")
+    info_lay.addWidget(info_icon)
+
+    info_text = QLabel(
+        "Requires an active GEE account and a Google Cloud Console project "
+        "with the API enabled."
+    )
+    info_text.setWordWrap(True)
+    info_text.setStyleSheet("color: #1b5e20; font-size: 10px;")
+    info_lay.addWidget(info_text, 1)
+
+    left_lay.addWidget(info_frame)
+    left_lay.addStretch()
+    row.addWidget(left)
+
+    # ── Right card ────────────────────────────────────────────────────────
+    card = QFrame()
+    card.setFixedWidth(260)
+    card.setStyleSheet("""
+        QFrame {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+        }
+        QLabel { background: transparent; border: none; }
+    """)
+    card_lay = QVBoxLayout(card)
+    card_lay.setContentsMargins(20, 20, 20, 20)
+    card_lay.setSpacing(7)
+
+    # Field label.
+    pid_lbl = QLabel("PROJECT ID (GOOGLE CLOUD)")
+    pid_lbl.setStyleSheet(
+        "color: #9e9e9e; font-size: 10px; letter-spacing: 1px; font-weight: bold;"
+    )
+    card_lay.addWidget(pid_lbl)
+
+    # Project ID input — underline style with password-toggle via QGIS widget.
+    dialog.project_id_input = QgsPasswordLineEdit()
+    dialog.project_id_input.setEchoMode(QLineEdit.EchoMode.Normal)
+    dialog.project_id_input.setPlaceholderText("e.g. my-geospatial-project-42")
+    dialog.project_id_input.setFixedHeight(30)
+    dialog.project_id_input.setStyleSheet("""
+        QLineEdit {
+            background-color: transparent;
+            color: #212121;
+            border: none;
+            border-bottom: 1.5px solid #d0d0d0;
+            border-radius: 0;
+            padding: 2px 0 6px 0;
+            font-size: 13px;
+        }
+        QLineEdit:focus {
+            border-bottom: 2px solid #1b6b39;
+        }
+    """)
+    card_lay.addWidget(dialog.project_id_input)
+
+    card_lay.addSpacing(3)
+
+    # Primary action — validates the ID and initiates GEE authentication.
+    dialog.btn_authenticate = QPushButton("\U0001f511   Validate ID")
+    dialog.btn_authenticate.setFixedHeight(34)
+    dialog.btn_authenticate.setStyleSheet(STYLE_BTN_PRIMARY)
+    card_lay.addWidget(dialog.btn_authenticate)
+
+    card_lay.addSpacing(2)
+
+    # Reset link — small and discrete; clears stored GEE credentials.
+    dialog.btn_reset_auth = QPushButton("Reset authentication")
+    dialog.btn_reset_auth.setFixedHeight(20)
+    dialog.btn_reset_auth.setStyleSheet("""
+        QPushButton {
+            background-color: transparent;
+            color: #bdbdbd;
+            border: none;
+            font-size: 10px;
+        }
+        QPushButton:hover { color: #c62828; }
+    """)
+    card_lay.addWidget(dialog.btn_reset_auth, 0, Qt.AlignmentFlag.AlignHCenter)
+
+    row.addWidget(card)
+    outer.addLayout(row)
+
+    # Shortcut to AOI page without requiring authentication first.
+    browse_row = QHBoxLayout()
+    browse_row.setContentsMargins(0, 10, 0, 0)
+
+    dialog.btn_go_to_aoi = QPushButton("Browse datasets without authenticating →")
+    dialog.btn_go_to_aoi.clicked.connect(dialog.show_aoi_page)
+    browse_row.addStretch()
+    browse_row.addWidget(dialog.btn_go_to_aoi)
+    browse_row.addStretch()
+    outer.addLayout(browse_row)
+
+    outer.addStretch(3)
