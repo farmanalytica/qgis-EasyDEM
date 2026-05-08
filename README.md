@@ -21,12 +21,17 @@ project with the Earth Engine API enabled.
 qgis-EasyDEM/
 ├── __init__.py          # QGIS entry point — registers the plugin via classFactory()
 ├── easy.py              # Plugin controller — owns the QGIS lifecycle (initGui, unload, run)
-├── easy_dialog.py       # UI layer — dialog window and widget definitions
+├── easy_dialog.py       # UI layer — dialog shell (header, stack, footer) and page navigation
 ├── dem_handler.py       # DEM orchestration — coordinates AOI management and service calls
 ├── resources.py         # Compiled Qt resources (icons, etc.)
 ├── pavement.py          # Build/dev task automation (paver)
 ├── assets/
 │   └── dem_catalog.json # DEM dataset definitions (name, collection, band, resolution, bbox)
+├── view/
+│   ├── __init__.py      # View package marker
+│   ├── auth.py          # Authentication page widget construction (setup_auth_page)
+│   ├── download_dem.py  # AOI/DEM page widget construction (setup_download_dem_page)
+│   └── styles.py        # Shared Qt stylesheet constants (STYLE_DIALOG, STYLE_BTN_PRIMARY, …)
 └── services/
     ├── __init__.py      # Exports service classes
     ├── gee_service.py   # Google Earth Engine business logic
@@ -49,22 +54,55 @@ The codebase follows a **UI / Service** separation:
 The QGIS plugin entry point. Handles toolbar/menu registration (`initGui`), teardown (`unload`), and launches the dialog (`run`). On first run it instantiates `GEEService`, `DEMHandler`, and connects all dialog signals to their handlers — this is the only place UI and services are wired together.
 
 ### `easy_dialog.py` — UI Layer
-Contains `EasyDemDialog(QDialog)`. Responsible only for building widgets. It has no knowledge of services or the `ee` SDK — all signal connections are made externally by the controller.
+Contains `EasyDemDialog(QDialog)`. Owns the dialog shell only: fixed header, central `QStackedWidget`, and fixed footer. Page widget construction is delegated to `view/auth.py` and `view/download_dem.py`. No knowledge of services or the `ee` SDK — all signal connections are made externally by the controller.
 
 Internal conventions:
-- `_setup_ui()` — constructs and arranges all widgets
-- Two pages managed by a `QStackedWidget`: `auth_page` shown on first open, `aoi_page` shown after successful authentication
+- `_setup_ui()` — builds header, stack, and footer; calls `setup_auth_page` and `setup_download_dem_page`
+- `_build_header()` — white bar with brand label, dynamic page-title label (`_header_title`), and help button
+- `_build_footer()` — FARM Analytica logo and attribution text
+- `show_auth_page()` / `show_aoi_page()` — switch the active stack page and update `_header_title`
+- Two pages managed by a `QStackedWidget`: `auth_page` shown on first open, `aoi_page` shown after authentication (or via the skip shortcut)
 
-Current widgets:
-| Widget | Attribute | Page | Purpose |
-|---|---|---|---|
-| QPushButton | `btn_authenticate` | auth | Triggers GEE authentication |
-| QPushButton | `btn_reset_auth` | auth | Resets existing GEE credentials |
-| QLineEdit | `project_id_input` | auth | User-supplied GCP project ID |
-| QgsMapLayerComboBox | `layer_combo` | aoi | Polygon layer selector for AOI |
-| QComboBox | `dem_combo` | aoi | Lists DEM datasets available for the selected AOI |
-| QTextBrowser | `dem_info` | aoi | Shows selected DEM dataset info |
-| QPushButton | `btn_download_dem` | aoi | Downloads and loads the selected DEM into QGIS |
+### `view/` — Page Modules
+
+Page widget construction is split into isolated modules. Each module exposes a single `setup_*` function that receives the dialog instance and its page widget, then attaches interactive widgets directly to the dialog so `easy.py` can wire signals without importing the modules.
+
+#### `view/auth.py`
+Builds the authentication page (`setup_auth_page`). Layout: left info column + right credential card + bottom browse-without-auth shortcut.
+
+| Widget | Attribute | Purpose |
+|---|---|---|
+| `QgsPasswordLineEdit` | `project_id_input` | User-supplied GCP project ID |
+| `QPushButton` | `btn_authenticate` | Validates ID and triggers GEE authentication |
+| `QPushButton` | `btn_reset_auth` | Clears stored GEE credentials |
+| `QPushButton` | `btn_go_to_aoi` | Skips authentication and navigates to AOI page |
+
+#### `view/download_dem.py`
+Builds the AOI and DEM download page (`setup_download_dem_page`). Layout: scrollable content area (inputs + metadata + buffer) above a fixed footer (folder picker + action buttons). Also defines `LimitedPopupComboBox`, a `QComboBox` subclass that caps popup height for long dataset catalogs.
+
+| Widget | Attribute | Purpose |
+|---|---|---|
+| `QgsMapLayerComboBox` | `layer_combo` | Polygon layer selector for AOI |
+| `LimitedPopupComboBox` | `dem_combo` | Lists DEM datasets available for the selected AOI |
+| `QTextBrowser` | `dem_info` | Shows selected DEM dataset metadata |
+| `QSlider` | `buffer_slider` | AOI buffer in metres (−300 … +300) |
+| `QLabel` | `buffer_value_lbl` | Live display of current buffer value |
+| `QLineEdit` | `folder_input` | Download destination path (read-only display) |
+| `QPushButton` | `btn_browse_folder` | Opens folder picker dialog |
+| `QPushButton` | `btn_back_auth` | Returns to the authentication page |
+| `QPushButton` | `btn_hybrid_layer` | Adds a Google Hybrid basemap layer to QGIS |
+| `QPushButton` | `btn_download_dem` | Downloads and loads the selected DEM into QGIS |
+
+#### `view/styles.py`
+Shared Qt stylesheet string constants imported by both page modules and `easy_dialog.py`.
+
+| Constant | Applied to |
+|---|---|
+| `STYLE_DIALOG` | `QDialog` base — grey background, dark text, thin scrollbar |
+| `STYLE_BTN_PRIMARY` | Solid green call-to-action buttons |
+| `STYLE_BTN_SECONDARY` | White/green-border navigation buttons |
+| `STYLE_BTN_HELP` | Circular "?" help button in the header |
+| `STYLE_AOI_PAGE` | AOI page panel card, field labels, combo boxes, metadata browser |
 
 ### `dem_handler.py` — DEM Handler
 Contains `DEMHandler`. Orchestrates DEM operations and coordinates between services. Owns the current AOI state and QGIS map canvas interactions. Delegates rendering, dataset management, and settings persistence to specialized services.
@@ -138,8 +176,8 @@ Contains `SettingsManager`. Handles persistence of user preferences in QGIS sett
 
 ## Adding a New Feature
 
-1. **UI changes** — edit `easy_dialog.py`. Add widgets in `_setup_ui`.
-2. **Business logic** — add a method to `GEEService` (or create a new service file under `services/`).
+1. **UI changes** — add widgets in the appropriate page module (`view/auth.py` or `view/download_dem.py`). Attach them to `dialog` so `easy.py` can reach them. Add shared styles to `view/styles.py`.
+2. **Business logic** — add a method to the relevant service (or create a new service file under `services/`).
 3. **Wire them up** — in `easy.py`, connect the new widget's signal to the service method.
 
 > Keep the dialog ignorant of the GEE SDK. Keep the service ignorant of Qt widgets.
@@ -151,12 +189,14 @@ Contains `SettingsManager`. Handles persistence of user preferences in QGIS sett
 If you are an AI assistant working on this codebase, read this before making changes.
 
 **Layer boundaries — never cross these:**
-- The UI (`easy_dialog.py`) must not import `ee` or any service directly.
+- The UI (`easy_dialog.py` and `view/`) must not import `ee` or any service directly.
 - Services (`services/`) must not import Qt widgets or reference QGIS APIs.
 - `easy.py` is the only file allowed to wire UI to services.
 
 **Where things live:**
-- New widgets → `easy_dialog.py` (`_setup_ui`)
+- New widgets on the auth page → `view/auth.py` (`setup_auth_page`)
+- New widgets on the AOI/download page → `view/download_dem.py` (`setup_download_dem_page`)
+- New shared stylesheet constants → `view/styles.py`
 - New signal connections → `easy.py` (inside the `if self.first_start` block in `run()`)
 - New DEM handler/orchestration logic → `dem_handler.py`
 - New rendering/styling logic → `services/dem_renderer.py`
