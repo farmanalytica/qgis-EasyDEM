@@ -130,11 +130,14 @@ class EasyDemDialog(QDialog):
         self.stack.addWidget(self.auth_page)
         self.stack.addWidget(self.aoi_page)
         self.stack.currentChanged.connect(self._sync_page_state)
+
+        self.footer = self._build_footer()
+
         self.stack.setCurrentWidget(self.auth_page)
         self._sync_page_state(self.stack.currentIndex())
 
         root.addWidget(body, 1)
-        root.addWidget(self._build_footer())
+        root.addWidget(self.footer)
 
     # -----------------------------------------------------------------------
     # HEADER
@@ -209,19 +212,19 @@ class EasyDemDialog(QDialog):
         plain-text label.
         """
         footer = QWidget()
-        footer.setFixedHeight(56)
+        footer.setFixedHeight(36)
         footer.setStyleSheet(
             "background-color: #ffffff;"
             "QLabel { border: none; background: transparent; }"
         )
 
         lay = QHBoxLayout(footer)
-        lay.setContentsMargins(28, 6, 28, 6)
+        lay.setContentsMargins(28, 4, 28, 4)
         lay.setSpacing(8)
 
         # FARM Analytica logo — falls back to plain text if SVG is missing.
         farm_icon = QLabel()
-        farm_icon.setFixedHeight(24)
+        farm_icon.setFixedHeight(16)
         farm_icon.setStyleSheet("background: transparent;")
         logo_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -230,14 +233,14 @@ class EasyDemDialog(QDialog):
         )
         if os.path.exists(logo_path):
             pix = QPixmap(logo_path).scaledToHeight(
-                24, Qt.TransformationMode.SmoothTransformation
+                16, Qt.TransformationMode.SmoothTransformation
             )
             farm_icon.setPixmap(pix)
             farm_icon.setFixedWidth(pix.width())
         else:
             farm_icon.setText("FARM ANALYTICA")
             farm_icon.setStyleSheet(
-                "color: #1b6b39; font-size: 10px; font-weight: bold;"
+                "color: #1b6b39; font-size: 9px; font-weight: bold;"
             )
         farm_icon.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
@@ -248,14 +251,14 @@ class EasyDemDialog(QDialog):
         farm_text = QLabel()
         farm_text.setTextFormat(Qt.TextFormat.RichText)
         farm_text.setOpenExternalLinks(True)
-        farm_text.setWordWrap(True)
+        farm_text.setWordWrap(False)
         farm_text.setText(
             "This is a free and open project, supported by "
             '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
             'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
             "Get in touch for exclusive and personalized commercial solutions."
         )
-        farm_text.setStyleSheet("color: #616161; font-size: 10px;")
+        farm_text.setStyleSheet("color: #9e9e9e; font-size: 9px;")
         farm_text.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
@@ -291,11 +294,13 @@ class EasyDemDialog(QDialog):
         if self.stack.widget(index) is self.auth_page:
             self._header_title.setText("GEE Configuration")
             self.sidebar.set_active_page("auth")
+            self.footer.setVisible(True)
             return
 
         if self.stack.widget(index) is self.aoi_page:
             self._header_title.setText("Inputs & Parameters")
             self.sidebar.set_active_page("download")
+            self.footer.setVisible(False)
 
     def pop_message(self, message, kind):
         """

@@ -31,6 +31,7 @@ qgis-EasyDEM/
 │   ├── __init__.py      # View package marker
 │   ├── auth.py          # Authentication page widget construction (setup_auth_page)
 │   ├── download_dem.py  # AOI/DEM page widget construction (setup_download_dem_page)
+│   ├── sidebar.py       # Permanent collapsible navigation sidebar (Sidebar, SidebarNavButton)
 │   └── styles.py        # Shared Qt stylesheet constants (STYLE_DIALOG, STYLE_BTN_PRIMARY, …)
 └── services/
     ├── __init__.py      # Exports service classes
@@ -57,11 +58,13 @@ The QGIS plugin entry point. Handles toolbar/menu registration (`initGui`), tear
 Contains `EasyDemDialog(QDialog)`. Owns the dialog shell only: fixed header, central `QStackedWidget`, and fixed footer. Page widget construction is delegated to `view/auth.py` and `view/download_dem.py`. No knowledge of services or the `ee` SDK — all signal connections are made externally by the controller.
 
 Internal conventions:
-- `_setup_ui()` — builds header, stack, and footer; calls `setup_auth_page` and `setup_download_dem_page`
+- `_setup_ui()` — builds header, body row (sidebar + stack), and footer; calls `setup_auth_page` and `setup_download_dem_page`
 - `_build_header()` — white bar with brand label, dynamic page-title label (`_header_title`), and help button
 - `_build_footer()` — FARM Analytica logo and attribution text
-- `show_auth_page()` / `show_aoi_page()` — switch the active stack page and update `_header_title`
+- `show_auth_page()` / `show_aoi_page()` — switch the active stack page
+- `_sync_page_state(index)` — connected to `stack.currentChanged`; updates `_header_title` and calls `sidebar.set_active_page()` to keep navigation state in sync regardless of what triggers the page switch
 - Two pages managed by a `QStackedWidget`: `auth_page` shown on first open, `aoi_page` shown after authentication (or via the skip shortcut)
+- Permanent `Sidebar` instance lives in the body row; its `auth_requested` and `download_requested` signals are connected to `_nav_to_auth` and `_nav_to_download`
 
 ### `view/` — Page Modules
 
@@ -89,9 +92,17 @@ Builds the AOI and DEM download page (`setup_download_dem_page`). Layout: scroll
 | `QLabel` | `buffer_value_lbl` | Live display of current buffer value |
 | `QLineEdit` | `folder_input` | Download destination path (read-only display) |
 | `QPushButton` | `btn_browse_folder` | Opens folder picker dialog |
-| `QPushButton` | `btn_back_auth` | Returns to the authentication page |
 | `QPushButton` | `btn_hybrid_layer` | Adds a Google Hybrid basemap layer to QGIS |
 | `QPushButton` | `btn_download_dem` | Downloads and loads the selected DEM into QGIS |
+
+#### `view/sidebar.py`
+Defines `Sidebar(QFrame)` and `SidebarNavButton(QPushButton)`. The sidebar is a permanent collapsible navigation rail shown on all pages. It collapses to 64 px (icon only) and expands to 184 px on hover via `QVariantAnimation`.
+
+| Widget / method | Purpose |
+|---|---|
+| `btn_auth` | Navigates to the authentication page; emits `auth_requested` |
+| `btn_download` | Navigates to the AOI/download page; emits `download_requested` |
+| `set_active_page(page)` | Highlights the button matching `'auth'` or `'download'`; called by `_sync_page_state` in the dialog |
 
 #### `view/styles.py`
 Shared Qt stylesheet string constants imported by both page modules and `easy_dialog.py`.
@@ -196,6 +207,7 @@ If you are an AI assistant working on this codebase, read this before making cha
 **Where things live:**
 - New widgets on the auth page → `view/auth.py` (`setup_auth_page`)
 - New widgets on the AOI/download page → `view/download_dem.py` (`setup_download_dem_page`)
+- Sidebar navigation changes (buttons, icons, expand/collapse behaviour) → `view/sidebar.py`
 - New shared stylesheet constants → `view/styles.py`
 - New signal connections → `easy.py` (inside the `if self.first_start` block in `run()`)
 - New DEM handler/orchestration logic → `dem_handler.py`
