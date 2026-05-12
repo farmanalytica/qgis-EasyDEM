@@ -115,11 +115,23 @@ class EasyDemDialog(QDialog):
         self.sidebar.download_requested.connect(self._nav_to_download)
         body_lay.addWidget(self.sidebar)
 
+        # Right column: stack + footer stacked vertically, outside the sidebar.
+        right_col = QWidget()
+        right_col.setStyleSheet("background-color: #f5f5f5;")
+        right_lay = QVBoxLayout(right_col)
+        right_lay.setContentsMargins(0, 0, 0, 0)
+        right_lay.setSpacing(0)
+
         self.stack = QStackedWidget()
         self.stack.setFrameShape(QFrame.Shape.NoFrame)
         self.stack.setLineWidth(0)
         self.stack.setStyleSheet("background-color: #f5f5f5;")
-        body_lay.addWidget(self.stack, 1)
+        right_lay.addWidget(self.stack, 1)
+
+        self.footer = self._build_footer()
+        right_lay.addWidget(self.footer)
+
+        body_lay.addWidget(right_col, 1)
 
         self.auth_page = QWidget()
         self.aoi_page = QWidget()
@@ -131,13 +143,10 @@ class EasyDemDialog(QDialog):
         self.stack.addWidget(self.aoi_page)
         self.stack.currentChanged.connect(self._sync_page_state)
 
-        self.footer = self._build_footer()
-
         self.stack.setCurrentWidget(self.auth_page)
         self._sync_page_state(self.stack.currentIndex())
 
         root.addWidget(body, 1)
-        root.addWidget(self.footer)
 
     # -----------------------------------------------------------------------
     # HEADER
@@ -190,7 +199,7 @@ class EasyDemDialog(QDialog):
         self.browser.setStyleSheet(STYLE_BTN_HELP)
         self.browser.clicked.connect(
             lambda: QDesktopServices.openUrl(
-                QUrl("https://farmanalytica.github.io/qgis-EasyDEM/")
+                QUrl("https://easydem.org")
             )
         )
         lay.addWidget(self.browser)
@@ -214,7 +223,7 @@ class EasyDemDialog(QDialog):
         footer = QWidget()
         footer.setFixedHeight(36)
         footer.setStyleSheet(
-            "background-color: #ffffff;"
+            "background-color: transparent;"
             "QLabel { border: none; background: transparent; }"
         )
 
