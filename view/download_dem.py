@@ -147,7 +147,15 @@ def setup_download_dem_page(dialog, page):
     dialog.layer_combo.setFixedHeight(28)
     scroll_lay.addWidget(dialog.layer_combo)
 
-    scroll_lay.addSpacing(2)
+    scroll_lay.addSpacing(4)
+
+    # Add Google Hybrid basemap shortcut — placed right under the AOI selector.
+    dialog.btn_hybrid_layer = QPushButton("Add Google Hybrid Layer")
+    dialog.btn_hybrid_layer.setFixedHeight(28)
+    dialog.btn_hybrid_layer.setStyleSheet(STYLE_BTN_SECONDARY)
+    scroll_lay.addWidget(dialog.btn_hybrid_layer)
+
+    scroll_lay.addSpacing(6)
 
     # DEM dataset selector.
     dem_lbl = QLabel("DEM DATASET")
@@ -220,6 +228,8 @@ def setup_download_dem_page(dialog, page):
     dialog.buffer_slider = QSlider(Qt.Orientation.Horizontal)
     dialog.buffer_slider.setMinimum(-300)
     dialog.buffer_slider.setMaximum(300)
+    dialog.buffer_slider.setSingleStep(1)
+    dialog.buffer_slider.setPageStep(10)
     dialog.buffer_slider.setValue(0)
     dialog.buffer_slider.setTickInterval(100)
     dialog.buffer_slider.setTickPosition(QSlider.TickPosition.NoTicks)
@@ -236,11 +246,17 @@ def setup_download_dem_page(dialog, page):
     dialog.buffer_value_lbl.setStyleSheet("color: #616161; font-size: 10px;")
     scroll_lay.addWidget(dialog.buffer_value_lbl)
 
-    dialog.buffer_slider.valueChanged.connect(
-        lambda v: dialog.buffer_value_lbl.setText(
-            f"Buffer: {v:+d} m" if v != 0 else "Buffer: 0 m"
+    def _set_buffer_value(value):
+        value = 0 if -3 <= value <= 3 else value
+        if dialog.buffer_slider.value() != value:
+            dialog.buffer_slider.blockSignals(True)
+            dialog.buffer_slider.setValue(value)
+            dialog.buffer_slider.blockSignals(False)
+        dialog.buffer_value_lbl.setText(
+            f"Buffer: {value:+d} m" if value != 0 else "Buffer: 0 m"
         )
-    )
+
+    dialog.buffer_slider.valueChanged.connect(_set_buffer_value)
 
     scroll_lay.addStretch()
     scroll_area.setWidget(scroll_content)
@@ -276,29 +292,19 @@ def setup_download_dem_page(dialog, page):
 
     panel_lay.addSpacing(6)
 
-    # Action buttons row.
+    # Action buttons row — download centred, sidebar handles back navigation.
     action_row = QHBoxLayout()
     action_row.setContentsMargins(0, 0, 0, 0)
     action_row.setSpacing(8)
 
-    dialog.btn_back_auth = QPushButton("Authentication Screen")
-    dialog.btn_back_auth.setFixedSize(140, 28)
-    dialog.btn_back_auth.setToolTip("Return to GEE authentication")
-    dialog.btn_back_auth.setStyleSheet(STYLE_BTN_SECONDARY)
-    dialog.btn_back_auth.clicked.connect(dialog.show_auth_page)
-    action_row.addWidget(dialog.btn_back_auth, 0, Qt.AlignmentFlag.AlignLeft)
-
     action_row.addStretch(1)
 
-    dialog.btn_hybrid_layer = QPushButton("Add Google Hybrid Layer")
-    dialog.btn_hybrid_layer.setFixedHeight(28)
-    dialog.btn_hybrid_layer.setStyleSheet(STYLE_BTN_SECONDARY)
-    action_row.addWidget(dialog.btn_hybrid_layer, 0, Qt.AlignmentFlag.AlignRight)
-
     dialog.btn_download_dem = QPushButton("Download DEM")
-    dialog.btn_download_dem.setFixedSize(140, 28)
+    dialog.btn_download_dem.setFixedSize(160, 32)
     dialog.btn_download_dem.setStyleSheet(STYLE_BTN_PRIMARY)
-    action_row.addWidget(dialog.btn_download_dem, 0, Qt.AlignmentFlag.AlignRight)
+    action_row.addWidget(dialog.btn_download_dem)
+
+    action_row.addStretch(1)
 
     panel_lay.addLayout(action_row)
 

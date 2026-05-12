@@ -2,9 +2,9 @@
 """
 Authentication page for the EasyDEM dialog.
 
-Builds the first workflow page: Google Earth Engine project configuration,
-authentication controls, and a shortcut to browse datasets without
-authenticating.  Signal connections are wired externally by ``easy.py``.
+Builds the first workflow page: Google Earth Engine project configuration
+and authentication controls. Signal connections are wired externally by
+``easy.py``.
 """
 
 import os
@@ -35,14 +35,11 @@ def setup_auth_page(dialog, page):
 
     The layout is a two-column row centred vertically on the page:
 
-    - **Left column** (200 px fixed): plugin icon + caption, title label,
+    - **Left column** (220 px fixed): plugin icon + caption, title label,
       plain-text description, and an info box explaining GEE prerequisites.
     - **Right card** (260 px fixed, white rounded card): a ``project_id_input``
       field for the Google Cloud project ID, a ``btn_authenticate`` primary
       action button, and a ``btn_reset_auth`` discrete reset link.
-    - **Below the row**: a ``btn_go_to_aoi`` shortcut that skips authentication
-      and navigates directly to the AOI page.
-
     All interactive widgets are exposed on ``dialog`` so ``easy.py`` can wire
     signal connections without importing this module's internals.
     """
@@ -54,16 +51,16 @@ def setup_auth_page(dialog, page):
     outer.addStretch(2)
 
     row = QHBoxLayout()
-    row.setContentsMargins(24, 0, 24, 0)
-    row.setSpacing(20)
+    row.setContentsMargins(28, 0, 28, 0)
+    row.setSpacing(34)
 
     # ── Left column ───────────────────────────────────────────────────────
     left = QWidget()
-    left.setFixedWidth(200)
+    left.setFixedWidth(230)
     left.setStyleSheet("background: transparent;")
     left_lay = QVBoxLayout(left)
     left_lay.setContentsMargins(0, 0, 0, 0)
-    left_lay.setSpacing(10)
+    left_lay.setSpacing(8)
 
     # Plugin icon + caption — cropped to remove top whitespace in the PNG.
     logo_col = QVBoxLayout()
@@ -100,7 +97,7 @@ def setup_auth_page(dialog, page):
 
     # Page title.
     title_lbl = QLabel("GEE Authentication")
-    title_lbl.setStyleSheet("color: #1a1a1a; font-size: 16px; font-weight: bold;")
+    title_lbl.setStyleSheet("color: #1a1a1a; font-size: 18px; font-weight: bold;")
     left_lay.addWidget(title_lbl)
 
     # Short explanation of why authentication is required.
@@ -110,7 +107,7 @@ def setup_auth_page(dialog, page):
     )
     desc_lbl.setWordWrap(True)
     desc_lbl.setTextFormat(Qt.TextFormat.RichText)
-    desc_lbl.setStyleSheet("color: #616161; font-size: 11px;")
+    desc_lbl.setStyleSheet("color: #616161; font-size: 13px;")
     left_lay.addWidget(desc_lbl)
 
     # Info box — green left border highlights the prerequisite note.
@@ -138,16 +135,18 @@ def setup_auth_page(dialog, page):
         "with the API enabled."
     )
     info_text.setWordWrap(True)
-    info_text.setStyleSheet("color: #1b5e20; font-size: 10px;")
+    info_text.setStyleSheet("color: #1b5e20; font-size: 12px;")
     info_lay.addWidget(info_text, 1)
 
     left_lay.addWidget(info_frame)
     left_lay.addStretch()
+    row.addStretch(1)
     row.addWidget(left)
 
     # ── Right card ────────────────────────────────────────────────────────
     card = QFrame()
-    card.setFixedWidth(260)
+    card.setFixedWidth(258)
+    card.setFixedHeight(218)
     card.setStyleSheet("""
         QFrame {
             background-color: #ffffff;
@@ -157,21 +156,22 @@ def setup_auth_page(dialog, page):
         QLabel { background: transparent; border: none; }
     """)
     card_lay = QVBoxLayout(card)
-    card_lay.setContentsMargins(20, 20, 20, 20)
+    card_lay.setContentsMargins(20, 18, 20, 14)
     card_lay.setSpacing(7)
 
     # Field label.
     pid_lbl = QLabel("PROJECT ID (GOOGLE CLOUD)")
     pid_lbl.setStyleSheet(
-        "color: #9e9e9e; font-size: 10px; letter-spacing: 1px; font-weight: bold;"
+        "color: #9e9e9e; font-size: 11px; letter-spacing: 1px; font-weight: bold;"
     )
     card_lay.addWidget(pid_lbl)
+    card_lay.addSpacing(18)
 
     # Project ID input — underline style with password-toggle via QGIS widget.
     dialog.project_id_input = QgsPasswordLineEdit()
     dialog.project_id_input.setEchoMode(QLineEdit.EchoMode.Normal)
     dialog.project_id_input.setPlaceholderText("e.g. my-geospatial-project-42")
-    dialog.project_id_input.setFixedHeight(30)
+    dialog.project_id_input.setFixedHeight(28)
     dialog.project_id_input.setStyleSheet("""
         QLineEdit {
             background-color: transparent;
@@ -180,7 +180,7 @@ def setup_auth_page(dialog, page):
             border-bottom: 1.5px solid #d0d0d0;
             border-radius: 0;
             padding: 2px 0 6px 0;
-            font-size: 13px;
+            font-size: 14px;
         }
         QLineEdit:focus {
             border-bottom: 2px solid #1b6b39;
@@ -211,19 +211,16 @@ def setup_auth_page(dialog, page):
         QPushButton:hover { color: #c62828; }
     """)
     card_lay.addWidget(dialog.btn_reset_auth, 0, Qt.AlignmentFlag.AlignHCenter)
+    card_lay.addStretch(1)
 
     row.addWidget(card)
+    row.addStretch(1)
     outer.addLayout(row)
 
-    # Shortcut to AOI page without requiring authentication first.
-    browse_row = QHBoxLayout()
-    browse_row.setContentsMargins(0, 10, 0, 0)
-
-    dialog.btn_go_to_aoi = QPushButton("Browse datasets without authenticating →")
+    # Hidden navigation hook used by the sidebar and controller to load
+    # datasets before showing the AOI page.
+    dialog.btn_go_to_aoi = QPushButton(page)
+    dialog.btn_go_to_aoi.hide()
     dialog.btn_go_to_aoi.clicked.connect(dialog.show_aoi_page)
-    browse_row.addStretch()
-    browse_row.addWidget(dialog.btn_go_to_aoi)
-    browse_row.addStretch()
-    outer.addLayout(browse_row)
 
     outer.addStretch(3)

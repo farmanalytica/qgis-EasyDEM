@@ -38,6 +38,7 @@ from qgis.PyQt.QtWidgets import (
 
 from .view.auth import setup_auth_page
 from .view.download_dem import setup_download_dem_page
+from .view.sidebar import Sidebar
 from .view.styles import STYLE_DIALOG, STYLE_BTN_HELP
 
 
@@ -93,7 +94,7 @@ class EasyDemDialog(QDialog):
             | Qt.WindowType.WindowCloseButtonHint
         )
         self.setWindowModality(Qt.WindowModality.NonModal)
-        self.setFixedSize(800, 400)
+        self.setFixedSize(800, 404)
         self.setStyleSheet(STYLE_DIALOG)
 
         root = QVBoxLayout(self)
@@ -102,24 +103,37 @@ class EasyDemDialog(QDialog):
 
         root.addWidget(self._build_header())
 
-        # Central stack hosts each workflow page inside the fixed-size dialog.
+        # Body row: permanent sidebar + page stack.
+        body = QWidget()
+        body.setStyleSheet("background-color: #f5f5f5;")
+        body_lay = QHBoxLayout(body)
+        body_lay.setContentsMargins(0, 0, 0, 0)
+        body_lay.setSpacing(8)
+
+        self.sidebar = Sidebar()
+        self.sidebar.auth_requested.connect(self._nav_to_auth)
+        self.sidebar.download_requested.connect(self._nav_to_download)
+        body_lay.addWidget(self.sidebar)
+
         self.stack = QStackedWidget()
         self.stack.setFrameShape(QFrame.Shape.NoFrame)
         self.stack.setLineWidth(0)
         self.stack.setStyleSheet("background-color: #f5f5f5;")
-        root.addWidget(self.stack, 1)
+        body_lay.addWidget(self.stack, 1)
 
         self.auth_page = QWidget()
         self.aoi_page = QWidget()
 
-        # Delegate page construction to isolated view modules.
         setup_auth_page(self, self.auth_page)
         setup_download_dem_page(self, self.aoi_page)
 
         self.stack.addWidget(self.auth_page)
         self.stack.addWidget(self.aoi_page)
+        self.stack.currentChanged.connect(self._sync_page_state)
         self.stack.setCurrentWidget(self.auth_page)
+        self._sync_page_state(self.stack.currentIndex())
 
+        root.addWidget(body, 1)
         root.addWidget(self._build_footer())
 
     # -----------------------------------------------------------------------
@@ -195,7 +209,7 @@ class EasyDemDialog(QDialog):
         plain-text label.
         """
         footer = QWidget()
-        footer.setFixedHeight(52)
+        footer.setFixedHeight(56)
         footer.setStyleSheet(
             "background-color: #ffffff;"
             "QLabel { border: none; background: transparent; }"
@@ -241,7 +255,7 @@ class EasyDemDialog(QDialog):
             'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
             "Get in touch for exclusive and personalized commercial solutions."
         )
-        farm_text.setStyleSheet("color: #616161; font-size: 8px;")
+        farm_text.setStyleSheet("color: #616161; font-size: 10px;")
         farm_text.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
@@ -255,13 +269,33 @@ class EasyDemDialog(QDialog):
 
     def show_aoi_page(self):
         """Switch the stacked widget to the AOI selection page."""
-        self._header_title.setText("Inputs & Parameters")
         self.stack.setCurrentWidget(self.aoi_page)
 
     def show_auth_page(self):
         """Switch the stacked widget to the authentication page."""
-        self._header_title.setText("GEE Configuration")
         self.stack.setCurrentWidget(self.auth_page)
+
+    def _nav_to_auth(self):
+        """Sidebar auth button — always navigates to the auth page."""
+        self.show_auth_page()
+
+    def _nav_to_download(self):
+        """Sidebar download button follows the existing dataset-loading path."""
+        if hasattr(self, "btn_go_to_aoi"):
+            self.btn_go_to_aoi.click()
+            return
+        self.show_aoi_page()
+
+    def _sync_page_state(self, index):
+        """Keep header and sidebar state aligned with the current stack page."""
+        if self.stack.widget(index) is self.auth_page:
+            self._header_title.setText("GEE Configuration")
+            self.sidebar.set_active_page("auth")
+            return
+
+        if self.stack.widget(index) is self.aoi_page:
+            self._header_title.setText("Inputs & Parameters")
+            self.sidebar.set_active_page("download")
 
     def pop_message(self, message, kind):
         """
