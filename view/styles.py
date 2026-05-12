@@ -52,7 +52,7 @@ QPushButton {
     color: #ffffff;
     border: none;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: bold;
     padding: 0 16px;
 }
@@ -73,7 +73,7 @@ QPushButton {
     color: #1b6b39;
     border: 1px solid #c8d8ce;
     border-radius: 7px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: bold;
     padding: 0 12px;
 }
@@ -110,16 +110,16 @@ QLabel {
 }
 QLabel#aoiTitle {
     color: #1a1a1a;
-    font-size: 15px;
+    font-size: 17px;
     font-weight: bold;
 }
 QLabel#aoiSubtitle {
     color: #616161;
-    font-size: 10px;
+    font-size: 12px;
 }
 QLabel#aoiFieldLabel {
     color: #9e9e9e;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: bold;
     letter-spacing: 1px;
 }
@@ -130,7 +130,7 @@ QComboBox, QgsMapLayerComboBox {
     border: 1px solid #d0d0d0;
     border-radius: 6px;
     padding: 4px 8px;
-    font-size: 11px;
+    font-size: 13px;
 }
 QComboBox:focus, QgsMapLayerComboBox:focus {
     border: 1.5px solid #1b6b39;
@@ -149,7 +149,7 @@ QTextBrowser#demInfo {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     padding: 8px;
-    font-size: 11px;
+    font-size: 12px;
 }
 QTextBrowser#demInfo:focus {
     border-color: #1b6b39;
