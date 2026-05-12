@@ -62,38 +62,7 @@ def setup_auth_page(dialog, page):
     left_lay.setContentsMargins(0, 0, 0, 0)
     left_lay.setSpacing(8)
 
-    # Plugin icon + caption — cropped to remove top whitespace in the PNG.
-    logo_col = QVBoxLayout()
-    logo_col.setSpacing(4)
-    logo_col.setAlignment(Qt.AlignmentFlag.AlignLeft)
-
-    icon_lbl = QLabel()
-    icon_lbl.setFixedSize(50, 40)
-    plugin_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    icon_path = os.path.join(plugin_dir, "icon.png")
-    if os.path.exists(icon_path):
-        raw = QPixmap(icon_path)
-        crop_top = int(raw.height() * 0.11)
-        cropped = raw.copy(0, crop_top, raw.width(), raw.height() - crop_top)
-        pix = cropped.scaled(
-            40, 40,
-            Qt.AspectRatioMode.IgnoreAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        icon_lbl.setPixmap(pix)
-    else:
-        icon_lbl.setText("\U0001f5fa")
-        icon_lbl.setStyleSheet("font-size: 28px;")
-    icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    icon_lbl.setStyleSheet("background: transparent; border: none;")
-    logo_col.addWidget(icon_lbl)
-
-    icon_caption = QLabel("EasyDEM")
-    icon_caption.setFixedWidth(50)
-    icon_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    icon_caption.setStyleSheet("color: #9e9e9e; font-size: 9px; letter-spacing: 0.5px;")
-    logo_col.addWidget(icon_caption)
-    left_lay.addLayout(logo_col)
+    left_lay.addStretch(1)
 
     # Page title.
     title_lbl = QLabel("GEE Authentication")
@@ -139,7 +108,7 @@ def setup_auth_page(dialog, page):
     info_lay.addWidget(info_text, 1)
 
     left_lay.addWidget(info_frame)
-    left_lay.addStretch()
+    left_lay.addStretch(1)
     row.addStretch(1)
     row.addWidget(left)
 

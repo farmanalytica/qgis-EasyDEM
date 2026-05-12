@@ -233,8 +233,7 @@ class Sidebar(QFrame):
         self._animate_width(SIDEBAR_EXPANDED_WIDTH if expanded else SIDEBAR_COLLAPSED_WIDTH)
 
     def _sync_brand_visibility(self) -> None:
-        show_brand = self._active_page == "download"
-        self.brand_block.setVisible(show_brand)
+        self.brand_block.setVisible(True)
 
     def _animate_width(self, target_width: int) -> None:
         if self.width() == target_width:
