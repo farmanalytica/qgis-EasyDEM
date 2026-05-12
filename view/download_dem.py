@@ -141,19 +141,27 @@ def setup_download_dem_page(dialog, page):
     layer_lbl.setObjectName("aoiFieldLabel")
     scroll_lay.addWidget(layer_lbl)
 
+    aoi_row = QWidget()
+    aoi_row_lay = QHBoxLayout(aoi_row)
+    aoi_row_lay.setContentsMargins(0, 0, 0, 0)
+    aoi_row_lay.setSpacing(6)
+
     dialog.layer_combo = QgsMapLayerComboBox()
     dialog.layer_combo.setObjectName("layerCombo")
     dialog.layer_combo.setFilters(QgsMapLayerProxyModel.PolygonLayer)
     dialog.layer_combo.setFixedHeight(28)
-    scroll_lay.addWidget(dialog.layer_combo)
+    aoi_row_lay.addWidget(dialog.layer_combo, 1)
 
-    scroll_lay.addSpacing(4)
-
-    # Add Google Hybrid basemap shortcut — placed right under the AOI selector.
     dialog.btn_hybrid_layer = QPushButton("Add Google Hybrid Layer")
     dialog.btn_hybrid_layer.setFixedHeight(28)
+    dialog.btn_hybrid_layer.setSizePolicy(
+        QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+    )
+    dialog.btn_hybrid_layer.adjustSize()
     dialog.btn_hybrid_layer.setStyleSheet(STYLE_BTN_SECONDARY)
-    scroll_lay.addWidget(dialog.btn_hybrid_layer)
+    aoi_row_lay.addWidget(dialog.btn_hybrid_layer)
+
+    scroll_lay.addWidget(aoi_row)
 
     scroll_lay.addSpacing(6)
 
@@ -206,9 +214,7 @@ def setup_download_dem_page(dialog, page):
     scroll_lay.addWidget(buffer_lbl)
 
     buffer_desc = QLabel(
-        "Expands (+) or shrinks (−) the selected polygon before sending the "
-        "request to GEE. Use a positive buffer to include terrain just outside "
-        "your area, or a negative buffer to crop the edges."
+        "Use a positive buffer to include terrain just outside your area, or a negative buffer to crop the edges."
     )
     buffer_desc.setWordWrap(True)
     buffer_desc.setStyleSheet("color: #757575; font-size: 9px;")
