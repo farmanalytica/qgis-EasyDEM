@@ -155,5 +155,13 @@
         <source>No Earth Engine configuration found to clear.</source>
         <translation>कोई Earth Engine कॉन्फ़िगरेशन नहीं मिला।</translation>
     </message>
+    <message>
+        <source>This is a free and open project, supported by </source>
+        <translation>यह एक निःशुल्क और ओपन-सोर्स परियोजना है, जिसे समर्थन दिया गया है </translation>
+    </message>
+    <message>
+        <source>Get in touch for exclusive and personalized commercial solutions.</source>
+        <translation>अनन्य और व्यक्तिगत व्यावसायिक समाधानों के लिए संपर्क करें।</translation>
+    </message>
 </context>
 </TS>

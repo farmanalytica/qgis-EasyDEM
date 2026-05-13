@@ -32,20 +32,18 @@ def _elf_hash(data: bytes) -> int:
     return h
 
 
-def _msg_hash(source: str, context: str, comment: str = '') -> int:
-    h1 = _elf_hash(source.encode('utf-8') + b'\xff' + comment.encode('utf-8'))
-    h2 = _elf_hash(context.encode('utf-8'))
-    return (h1 ^ h2) & 0xffffffff
+def _msg_hash(source: str) -> int:
+    return _elf_hash(source.encode('utf-8'))
 
 
-def _encode_message(source: str, translation: str, comment: str = '') -> bytes:
+def _encode_message(source: str, translation: str, context: str) -> bytes:
     buf = BytesIO()
     src = source.encode('utf-8') + b'\x00'
     buf.write(struct.pack('>BI', TAG_SOURCE, len(src)))
     buf.write(src)
-    cmt = comment.encode('utf-8') + b'\x00'
-    buf.write(struct.pack('>BI', TAG_COMMENT, len(cmt)))
-    buf.write(cmt)
+    ctx = context.encode('utf-8') + b'\x00'
+    buf.write(struct.pack('>BI', TAG_COMMENT, len(ctx)))
+    buf.write(ctx)
     trans = translation.encode('utf-16-be')
     buf.write(struct.pack('>BI', TAG_TRANSLATION, len(trans)))
     buf.write(trans)
@@ -75,8 +73,8 @@ def compile_ts(ts_path: str, qm_path: str) -> None:
     hash_pairs = []
     for source, translation, comment, ctx in entries:
         offset = msg_buf.tell()
-        msg_buf.write(_encode_message(source, translation, comment))
-        hash_pairs.append((_msg_hash(source, ctx, comment), offset))
+        msg_buf.write(_encode_message(source, translation, ctx))
+        hash_pairs.append((_msg_hash(source), offset))
 
     hash_pairs.sort()
 

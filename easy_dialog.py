@@ -266,10 +266,10 @@ class EasyDemDialog(QDialog):
         farm_text.setOpenExternalLinks(True)
         farm_text.setWordWrap(False)
         farm_text.setText(
-            "This is a free and open project, supported by "
-            '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
+            _tr("This is a free and open project, supported by ")
+            + '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
             'text-decoration:none;font-weight:bold;">FARM Analytica</a>. '
-            "Get in touch for exclusive and personalized commercial solutions."
+            + _tr("Get in touch for exclusive and personalized commercial solutions.")
         )
         farm_text.setStyleSheet("color: #9e9e9e; font-size: 9px;")
         farm_text.setSizePolicy(

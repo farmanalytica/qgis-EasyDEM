@@ -155,5 +155,13 @@
         <source>No Earth Engine configuration found to clear.</source>
         <translation>未找到 Earth Engine 配置。</translation>
     </message>
+    <message>
+        <source>This is a free and open project, supported by </source>
+        <translation>这是一个免费开源项目，由</translation>
+    </message>
+    <message>
+        <source>Get in touch for exclusive and personalized commercial solutions.</source>
+        <translation>联系我们获取专属个性化商业解决方案。</translation>
+    </message>
 </context>
 </TS>

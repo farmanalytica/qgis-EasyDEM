@@ -155,5 +155,13 @@
         <source>No Earth Engine configuration found to clear.</source>
         <translation>No se encontró configuración de Earth Engine.</translation>
     </message>
+    <message>
+        <source>This is a free and open project, supported by </source>
+        <translation>Este es un proyecto libre y de código abierto, apoyado por </translation>
+    </message>
+    <message>
+        <source>Get in touch for exclusive and personalized commercial solutions.</source>
+        <translation>Contáctenos para soluciones comerciales exclusivas y personalizadas.</translation>
+    </message>
 </context>
 </TS>
