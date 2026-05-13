@@ -96,6 +96,7 @@ class EasyDemDialog(QDialog):
             | Qt.WindowType.WindowTitleHint
             | Qt.WindowType.WindowMinimizeButtonHint
             | Qt.WindowType.WindowCloseButtonHint
+            | Qt.WindowType.WindowStaysOnTopHint
         )
         self.setWindowModality(Qt.WindowModality.NonModal)
         self.setFixedSize(800, 404)
