@@ -24,7 +24,7 @@ qgis-EasyDEM/
 ├── easy_dialog.py           # UI layer — dialog shell (header, stack, footer) and page navigation
 ├── dem_handler.py           # DEM orchestration — coordinates AOI management and service calls
 ├── resources.py             # Compiled Qt resources (icons, etc.)
-├── pavement.py              # Build/dev task automation (paver)
+├── build_plugin.py          # Full build script — clean extlibs, install deps, compile translations, zip
 ├── compile_translations.py  # Compiles i18n/*.ts → *.qm without needing lrelease
 ├── assets/
 │   └── dem_catalog.json     # DEM dataset definitions (name, collection, band, resolution, bbox)
@@ -288,13 +288,22 @@ cd ~/.local/share/QGIS/profiles/default/python/plugins
 git clone https://github.com/farmanalytica/qgis-EasyDEM
 ```
 
-**Install dependencies**
+**Build and package**
 
-| Command | Description |
-|---|---|
-| `python -m paver` | Default — installs dependencies into `extlibs/` (alias for `build_extlibs`) |
-| `python -m paver build_extlibs` | Vendors all `requirements.txt` packages into `extlibs/` via `pip --target` |
-| `python -m paver clean_extlibs` | Removes the `extlibs/` directory |
+Run `build_plugin.py` from the **OSGeo4W Shell** to do a full release build — clean extlibs, reinstall dependencies, compile translations, and produce a distributable zip:
+
+```bat
+cd C:\OSGeo4W\apps\qgis-ltr\python\plugins\qgis-EasyDEM
+python-qgis-ltr build_plugin.py
+```
+
+Output: `dist/qgis-EasyDEM-plugin.zip`
+
+To vendor only the Python dependencies without building the zip:
+
+```bat
+python-qgis-ltr -m pip install -r requirements.txt --target extlibs --upgrade --no-compile
+```
 
 **Compile translations**
 
