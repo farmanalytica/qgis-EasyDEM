@@ -20,7 +20,7 @@ and the ``ee`` SDK.
 
 import os
 
-from qgis.PyQt.QtCore import Qt, QUrl
+from qgis.PyQt.QtCore import Qt, QUrl, QCoreApplication
 from qgis.PyQt.QtGui import QDesktopServices, QPixmap
 from qgis.PyQt.QtWidgets import (
     QApplication,
@@ -40,6 +40,10 @@ from .view.auth import setup_auth_page
 from .view.download_dem import setup_download_dem_page
 from .view.sidebar import Sidebar
 from .view.styles import STYLE_DIALOG, STYLE_BTN_HELP
+
+
+def _tr(text):
+    return QCoreApplication.translate("EasyDem", text)
 
 
 class EasyDemDialog(QDialog):
@@ -184,7 +188,7 @@ class EasyDemDialog(QDialog):
         lay.addWidget(sep_lbl)
 
         # Dynamic title updated by show_auth_page / show_aoi_page.
-        self._header_title = QLabel("GEE Configuration")
+        self._header_title = QLabel(_tr("GEE Configuration"))
         self._header_title.setStyleSheet(
             "color: #616161; font-size: 13px; margin-left: 4px;"
         )
@@ -195,7 +199,7 @@ class EasyDemDialog(QDialog):
         # Help button — opens the plugin documentation in the default browser.
         self.browser = QPushButton("?")
         self.browser.setFixedSize(28, 28)
-        self.browser.setToolTip("Learn more")
+        self.browser.setToolTip(_tr("Learn more"))
         self.browser.setStyleSheet(STYLE_BTN_HELP)
         self.browser.clicked.connect(
             lambda: QDesktopServices.openUrl(
@@ -301,13 +305,13 @@ class EasyDemDialog(QDialog):
     def _sync_page_state(self, index):
         """Keep header and sidebar state aligned with the current stack page."""
         if self.stack.widget(index) is self.auth_page:
-            self._header_title.setText("GEE Configuration")
+            self._header_title.setText(_tr("GEE Configuration"))
             self.sidebar.set_active_page("auth")
             self.footer.setVisible(True)
             return
 
         if self.stack.widget(index) is self.aoi_page:
-            self._header_title.setText("Inputs & Parameters")
+            self._header_title.setText(_tr("Inputs & Parameters"))
             self.sidebar.set_active_page("download")
             self.footer.setVisible(False)
 
@@ -323,8 +327,8 @@ class EasyDemDialog(QDialog):
 
         # Map semantic severity to QMessageBox configuration.
         config = {
-            "info": ("Information", QMessageBox.Icon.Information),
-            "warning": ("Warning", QMessageBox.Icon.Warning),
+            "info": (_tr("Information"), QMessageBox.Icon.Information),
+            "warning": (_tr("Warning"), QMessageBox.Icon.Warning),
         }
         title, icon = config.get(kind, config["info"])
 

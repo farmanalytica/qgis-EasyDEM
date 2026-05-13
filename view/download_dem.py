@@ -8,7 +8,7 @@ action buttons.  Signal connections are wired externally by ``easy.py`` and
 ``dem_handler.py``.
 """
 
-from qgis.PyQt.QtCore import Qt, QTimer
+from qgis.PyQt.QtCore import Qt, QTimer, QCoreApplication
 from qgis.PyQt.QtWidgets import (
     QComboBox,
     QFrame,
@@ -28,6 +28,10 @@ from qgis.core import QgsMapLayerProxyModel
 from qgis.gui import QgsMapLayerComboBox
 
 from .styles import STYLE_AOI_PAGE, STYLE_BTN_PRIMARY, STYLE_BTN_SECONDARY
+
+
+def _tr(text):
+    return QCoreApplication.translate("EasyDem", text)
 
 
 # ---------------------------------------------------------------------------
@@ -126,18 +130,18 @@ def setup_download_dem_page(dialog, page):
     scroll_lay.setSpacing(6)
 
     # Title and subtitle.
-    title_lbl = QLabel("AOI and DEM inputs")
+    title_lbl = QLabel(_tr("AOI and DEM inputs"))
     title_lbl.setObjectName("aoiTitle")
     scroll_lay.addWidget(title_lbl)
 
-    subtitle_lbl = QLabel("Select the polygon layer and elevation dataset.")
+    subtitle_lbl = QLabel(_tr("Select the polygon layer and elevation dataset."))
     subtitle_lbl.setObjectName("aoiSubtitle")
     scroll_lay.addWidget(subtitle_lbl)
 
     scroll_lay.addSpacing(4)
 
     # AOI polygon layer selector.
-    layer_lbl = QLabel("AOI LAYER")
+    layer_lbl = QLabel(_tr("AOI LAYER"))
     layer_lbl.setObjectName("aoiFieldLabel")
     scroll_lay.addWidget(layer_lbl)
 
@@ -152,7 +156,7 @@ def setup_download_dem_page(dialog, page):
     dialog.layer_combo.setFixedHeight(28)
     aoi_row_lay.addWidget(dialog.layer_combo, 1)
 
-    dialog.btn_hybrid_layer = QPushButton("Add Google Hybrid Layer")
+    dialog.btn_hybrid_layer = QPushButton(_tr("Add Google Hybrid Layer"))
     dialog.btn_hybrid_layer.setFixedHeight(28)
     dialog.btn_hybrid_layer.setSizePolicy(
         QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
@@ -166,7 +170,7 @@ def setup_download_dem_page(dialog, page):
     scroll_lay.addSpacing(6)
 
     # DEM dataset selector.
-    dem_lbl = QLabel("DEM DATASET")
+    dem_lbl = QLabel(_tr("DEM DATASET"))
     dem_lbl.setObjectName("aoiFieldLabel")
     scroll_lay.addWidget(dem_lbl)
 
@@ -209,12 +213,12 @@ def setup_download_dem_page(dialog, page):
     scroll_lay.addSpacing(4)
 
     # AOI buffer label and description.
-    buffer_lbl = QLabel("AOI BUFFER")
+    buffer_lbl = QLabel(_tr("AOI BUFFER"))
     buffer_lbl.setObjectName("aoiFieldLabel")
     scroll_lay.addWidget(buffer_lbl)
 
     buffer_desc = QLabel(
-        "Use a positive buffer to include terrain just outside your area, or a negative buffer to crop the edges."
+        _tr("Use a positive buffer to include terrain just outside your area, or a negative buffer to crop the edges.")
     )
     buffer_desc.setWordWrap(True)
     buffer_desc.setStyleSheet("color: #757575; font-size: 9px;")
@@ -247,7 +251,7 @@ def setup_download_dem_page(dialog, page):
 
     scroll_lay.addLayout(buffer_row)
 
-    dialog.buffer_value_lbl = QLabel("Buffer: 0 m")
+    dialog.buffer_value_lbl = QLabel(_tr("Buffer: 0 m"))
     dialog.buffer_value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     dialog.buffer_value_lbl.setStyleSheet("color: #616161; font-size: 10px;")
     scroll_lay.addWidget(dialog.buffer_value_lbl)
@@ -259,7 +263,7 @@ def setup_download_dem_page(dialog, page):
             dialog.buffer_slider.setValue(value)
             dialog.buffer_slider.blockSignals(False)
         dialog.buffer_value_lbl.setText(
-            f"Buffer: {value:+d} m" if value != 0 else "Buffer: 0 m"
+            _tr("Buffer: %+d m") % value if value != 0 else _tr("Buffer: 0 m")
         )
 
     dialog.buffer_slider.valueChanged.connect(_set_buffer_value)
@@ -281,15 +285,15 @@ def setup_download_dem_page(dialog, page):
     folder_layout.setContentsMargins(0, 0, 0, 0)
     folder_layout.setSpacing(6)
 
-    folder_layout.addWidget(QLabel("Download to:"))
+    folder_layout.addWidget(QLabel(_tr("Download to:")))
 
     dialog.folder_input = QLineEdit()
-    dialog.folder_input.setPlaceholderText("Default Temporary Folder")
+    dialog.folder_input.setPlaceholderText(_tr("Default Temporary Folder"))
     dialog.folder_input.setReadOnly(True)
     dialog.folder_input.setFixedHeight(26)
     folder_layout.addWidget(dialog.folder_input)
 
-    dialog.btn_browse_folder = QPushButton("Browse...")
+    dialog.btn_browse_folder = QPushButton(_tr("Browse..."))
     dialog.btn_browse_folder.setFixedHeight(26)
     dialog.btn_browse_folder.setStyleSheet(STYLE_BTN_SECONDARY)
     folder_layout.addWidget(dialog.btn_browse_folder)
@@ -305,7 +309,7 @@ def setup_download_dem_page(dialog, page):
 
     action_row.addStretch(1)
 
-    dialog.btn_download_dem = QPushButton("Download DEM")
+    dialog.btn_download_dem = QPushButton(_tr("Download DEM"))
     dialog.btn_download_dem.setFixedSize(160, 32)
     dialog.btn_download_dem.setStyleSheet(STYLE_BTN_PRIMARY)
     action_row.addWidget(dialog.btn_download_dem)

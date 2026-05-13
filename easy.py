@@ -27,9 +27,10 @@ import os.path
 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QTranslator
 from qgis.core import (
     QgsProject,
+    QgsSettings,
 )
 
 from .resources import *
@@ -55,6 +56,16 @@ class EasyDem:
 
         self.first_start = None
 
+        locale = QgsSettings().value('locale/userLocale', 'en_US')
+        lang = locale[:2]
+        locale_map = {'pt': 'pt_BR', 'zh': 'zh_CN'}
+        qm_lang = locale_map.get(lang, lang)
+        self._translator = QTranslator()
+        qm_path = os.path.join(self.plugin_dir, 'i18n', f'easydem_{qm_lang}.qm')
+        if os.path.exists(qm_path):
+            self._translator.load(qm_path)
+            QCoreApplication.installTranslator(self._translator)
+
     def tr(self, message):
         """
         Translate a message string.
@@ -65,7 +76,7 @@ class EasyDem:
         Returns:
             Translated message string.
         """
-        return QCoreApplication.translate("easydem", message)
+        return QCoreApplication.translate("EasyDem", message)
 
     def add_action(
         self,
@@ -132,6 +143,7 @@ class EasyDem:
 
     def unload(self):
         """Remove the plugin from QGIS."""
+        QCoreApplication.removeTranslator(self._translator)
         for action in self.actions:
             self.interface.removePluginMenu("&EasyDEM", action)
             self.interface.removeToolBarIcon(action)
@@ -198,19 +210,19 @@ class EasyDem:
         """
         project_id = self.dlg.project_id_input.text()
         if not project_id:
-            self.dlg.pop_message("Missing Project ID.", "warning")
+            self.dlg.pop_message(self.tr("Missing Project ID."), "warning")
             return
 
         project_id_pattern = r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
 
         if not re.match(project_id_pattern, project_id):
-            self.dlg.pop_message("Invalid Project ID.", "warning")
+            self.dlg.pop_message(self.tr("Invalid Project ID."), "warning")
             return
 
         try:
             self.gee_service.authenticate(project_id)
             self.dlg.show_aoi_page()
-            self.dlg.pop_message("Authentication successful!", "info")
+            self.dlg.pop_message(self.tr("Authentication successful!"), "info")
 
             layer = self.dlg.layer_combo.currentLayer()
             if layer:

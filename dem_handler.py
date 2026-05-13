@@ -12,7 +12,7 @@ from qgis.core import (
 )
 
 from qgis.PyQt.QtWidgets import QApplication, QFileDialog
-from qgis.PyQt.QtCore import Qt, QTimer
+from qgis.PyQt.QtCore import Qt, QTimer, QCoreApplication
 
 
 try:
@@ -31,6 +31,10 @@ from .services.dem_renderer import DEMRenderer
 from .services.dataset_manager import DatasetManager
 from .services.settings_manager import SettingsManager
 from .services.dem_registry import DEMRegistry
+
+
+def _tr(text):
+    return QCoreApplication.translate("EasyDem", text)
 
 
 class DEMHandler:
@@ -58,7 +62,7 @@ class DEMHandler:
             layer = self.dlg.layer_combo.currentLayer()
 
             if not layer:
-                self.dlg.pop_message("Select a layer.", "warning")
+                self.dlg.pop_message(_tr("Select a layer."), "warning")
                 return
 
             self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(
@@ -84,21 +88,23 @@ class DEMHandler:
 
         if not self.gee_service.is_authenticated:
             self.dlg.pop_message(
-                "Authentication is required to download DEM data. "
-                "Please go to the Auth page and validate your Google Cloud project ID.",
+                _tr(
+                    "Authentication is required to download DEM data. "
+                    "Please go to the Auth page and validate your Google Cloud project ID."
+                ),
                 "warning",
             )
             return
 
         if not self.current_aoi:
             self.dlg.pop_message(
-                "No AOI selected. Please select a layer first.", "warning"
+                _tr("No AOI selected. Please select a layer first."), "warning"
             )
             return
 
         dataset_name = self.dlg.dem_combo.currentData()
         if not dataset_name:
-            self.dlg.pop_message("No dataset selected.", "warning")
+            self.dlg.pop_message(_tr("No dataset selected."), "warning")
             return
 
         output_folder = self.dlg.folder_input.text().strip() or None
@@ -114,7 +120,7 @@ class DEMHandler:
             )
             DEMRenderer.load_dem_to_qgis(dem_path, dataset_name)
             interface.messageBar().pushMessage(
-                "EasyDEM", f"DEM '{dataset_name}' loaded successfully."
+                "EasyDEM", _tr("DEM '%s' loaded successfully.") % dataset_name
             )
         except Exception as e:
             self.dlg.pop_message(str(e), "warning")
@@ -211,7 +217,7 @@ class DEMHandler:
 
         folder = QFileDialog.getExistingDirectory(
             self.dlg,
-            "Select DEM Download Folder",
+            _tr("Select DEM Download Folder"),
             current_folder,
         )
 
@@ -227,7 +233,7 @@ class DEMHandler:
         """Load the Google hybrid basemap layer."""
         hybrid_function()
         self.interface.messageBar().pushMessage(
-            "EasyDEM", "Google Hybrid Layer loaded successfully"
+            "EasyDEM", _tr("Google Hybrid Layer loaded successfully")
         )
 
     def _apply_buffer(self, aoi, buffer_distance: int):

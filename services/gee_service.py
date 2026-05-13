@@ -8,7 +8,11 @@ of SDK-specific details.
 
 import os
 import ee
-from qgis.PyQt.QtCore import QSettings
+from qgis.PyQt.QtCore import QCoreApplication, QSettings
+
+
+def _tr(text):
+    return QCoreApplication.translate("EasyDem", text)
 
 
 class GEEService:
@@ -98,7 +102,7 @@ class GEEService:
         credentials_path = ee.oauth.get_credentials_path()
 
         if not os.path.exists(credentials_path):
-            raise FileNotFoundError("No Earth Engine configuration found to clear.")
+            raise FileNotFoundError(_tr("No Earth Engine configuration found to clear."))
 
         os.remove(credentials_path)
 
@@ -111,4 +115,4 @@ class GEEService:
             pass
 
         self.is_authenticated = False
-        return "Earth Engine configuration cleared successfully."
+        return _tr("Earth Engine configuration cleared successfully.")

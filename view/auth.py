@@ -9,7 +9,7 @@ and authentication controls. Signal connections are wired externally by
 
 import os
 
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QCoreApplication
 from qgis.PyQt.QtGui import QPixmap
 from qgis.PyQt.QtWidgets import (
     QFrame,
@@ -23,6 +23,10 @@ from qgis.PyQt.QtWidgets import (
 from qgis.gui import QgsPasswordLineEdit
 
 from .styles import STYLE_BTN_PRIMARY
+
+
+def _tr(text):
+    return QCoreApplication.translate("EasyDem", text)
 
 
 # ---------------------------------------------------------------------------
@@ -65,14 +69,16 @@ def setup_auth_page(dialog, page):
     left_lay.addStretch(1)
 
     # Page title.
-    title_lbl = QLabel("GEE Authentication")
+    title_lbl = QLabel(_tr("GEE Authentication"))
     title_lbl.setStyleSheet("color: #1a1a1a; font-size: 18px; font-weight: bold;")
     left_lay.addWidget(title_lbl)
 
     # Short explanation of why authentication is required.
     desc_lbl = QLabel(
-        "EasyDEM uses <b>Google Earth Engine</b> for processing. "
-        "To continue, you will need authorized access."
+        _tr(
+            "EasyDEM uses <b>Google Earth Engine</b> for processing. "
+            "To continue, you will need authorized access."
+        )
     )
     desc_lbl.setWordWrap(True)
     desc_lbl.setTextFormat(Qt.TextFormat.RichText)
@@ -100,8 +106,10 @@ def setup_auth_page(dialog, page):
     info_lay.addWidget(info_icon)
 
     info_text = QLabel(
-        "Requires an active GEE account and a Google Cloud Console project "
-        "with the API enabled."
+        _tr(
+            "Requires an active GEE account and a Google Cloud Console project "
+            "with the API enabled."
+        )
     )
     info_text.setWordWrap(True)
     info_text.setStyleSheet("color: #1b5e20; font-size: 12px;")
@@ -129,7 +137,7 @@ def setup_auth_page(dialog, page):
     card_lay.setSpacing(7)
 
     # Field label.
-    pid_lbl = QLabel("PROJECT ID (GOOGLE CLOUD)")
+    pid_lbl = QLabel(_tr("PROJECT ID (GOOGLE CLOUD)"))
     pid_lbl.setStyleSheet(
         "color: #9e9e9e; font-size: 11px; letter-spacing: 1px; font-weight: bold;"
     )
@@ -139,7 +147,7 @@ def setup_auth_page(dialog, page):
     # Project ID input — underline style with password-toggle via QGIS widget.
     dialog.project_id_input = QgsPasswordLineEdit()
     dialog.project_id_input.setEchoMode(QLineEdit.EchoMode.Normal)
-    dialog.project_id_input.setPlaceholderText("e.g. my-geospatial-project-42")
+    dialog.project_id_input.setPlaceholderText(_tr("e.g. my-geospatial-project-42"))
     dialog.project_id_input.setFixedHeight(28)
     dialog.project_id_input.setStyleSheet("""
         QLineEdit {
@@ -160,7 +168,7 @@ def setup_auth_page(dialog, page):
     card_lay.addSpacing(3)
 
     # Primary action — validates the ID and initiates GEE authentication.
-    dialog.btn_authenticate = QPushButton("\U0001f511   Validate ID")
+    dialog.btn_authenticate = QPushButton(_tr("🔑   Validate ID"))
     dialog.btn_authenticate.setFixedHeight(34)
     dialog.btn_authenticate.setStyleSheet(STYLE_BTN_PRIMARY)
     card_lay.addWidget(dialog.btn_authenticate)
@@ -168,7 +176,7 @@ def setup_auth_page(dialog, page):
     card_lay.addSpacing(2)
 
     # Reset link — small and discrete; clears stored GEE credentials.
-    dialog.btn_reset_auth = QPushButton("Reset authentication")
+    dialog.btn_reset_auth = QPushButton(_tr("Reset authentication"))
     dialog.btn_reset_auth.setFixedHeight(20)
     dialog.btn_reset_auth.setStyleSheet("""
         QPushButton {

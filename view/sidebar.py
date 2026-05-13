@@ -8,7 +8,7 @@ in ``easy_dialog.py`` so the dialog can keep header and active state in sync.
 
 import os
 
-from qgis.PyQt.QtCore import QEasingCurve, QRectF, Qt, QSize, QVariantAnimation, pyqtSignal
+from qgis.PyQt.QtCore import QCoreApplication, QEasingCurve, QRectF, Qt, QSize, QVariantAnimation, pyqtSignal
 from qgis.PyQt.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from qgis.PyQt.QtWidgets import (
     QButtonGroup,
@@ -20,6 +20,10 @@ from qgis.PyQt.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+
+def _tr(text):
+    return QCoreApplication.translate("EasyDem", text)
 
 
 # Visual tokens kept local because this component is self-contained.
@@ -115,11 +119,11 @@ class Sidebar(QFrame):
         brand_block_lay.addSpacing(10)
         lay.addWidget(self.brand_block)
 
-        self.btn_auth = self._make_button("Auth", "auth")
+        self.btn_auth = self._make_button(_tr("Auth"), "auth")
         self.btn_auth.clicked.connect(self.auth_requested.emit)
         lay.addWidget(self.btn_auth)
 
-        self.btn_download = self._make_button("Download DEM", "download")
+        self.btn_download = self._make_button(_tr("Download DEM"), "download")
         self.btn_download.clicked.connect(self.download_requested.emit)
         lay.addWidget(self.btn_download)
 

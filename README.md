@@ -19,30 +19,38 @@ project with the Earth Engine API enabled.
 
 ```
 qgis-EasyDEM/
-├── __init__.py          # QGIS entry point — registers the plugin via classFactory()
-├── easy.py              # Plugin controller — owns the QGIS lifecycle (initGui, unload, run)
-├── easy_dialog.py       # UI layer — dialog shell (header, stack, footer) and page navigation
-├── dem_handler.py       # DEM orchestration — coordinates AOI management and service calls
-├── resources.py         # Compiled Qt resources (icons, etc.)
-├── pavement.py          # Build/dev task automation (paver)
+├── __init__.py              # QGIS entry point — registers the plugin via classFactory()
+├── easy.py                  # Plugin controller — owns the QGIS lifecycle (initGui, unload, run)
+├── easy_dialog.py           # UI layer — dialog shell (header, stack, footer) and page navigation
+├── dem_handler.py           # DEM orchestration — coordinates AOI management and service calls
+├── resources.py             # Compiled Qt resources (icons, etc.)
+├── pavement.py              # Build/dev task automation (paver)
+├── compile_translations.py  # Compiles i18n/*.ts → *.qm without needing lrelease
 ├── assets/
-│   └── dem_catalog.json # DEM dataset definitions (name, collection, band, resolution, bbox)
+│   └── dem_catalog.json     # DEM dataset definitions (name, collection, band, resolution, bbox)
+├── i18n/
+│   ├── easydem_pt_BR.ts/.qm # Portuguese (Brazil)
+│   ├── easydem_fr.ts/.qm    # French
+│   ├── easydem_it.ts/.qm    # Italian
+│   ├── easydem_es.ts/.qm    # Spanish
+│   ├── easydem_hi.ts/.qm    # Hindi
+│   └── easydem_zh_CN.ts/.qm # Chinese (Simplified)
 ├── view/
-│   ├── __init__.py      # View package marker
-│   ├── auth.py          # Authentication page widget construction (setup_auth_page)
-│   ├── download_dem.py  # AOI/DEM page widget construction (setup_download_dem_page)
-│   ├── sidebar.py       # Permanent collapsible navigation sidebar (Sidebar, SidebarNavButton)
-│   └── styles.py        # Shared Qt stylesheet constants (STYLE_DIALOG, STYLE_BTN_PRIMARY, …)
+│   ├── __init__.py          # View package marker
+│   ├── auth.py              # Authentication page widget construction (setup_auth_page)
+│   ├── download_dem.py      # AOI/DEM page widget construction (setup_download_dem_page)
+│   ├── sidebar.py           # Permanent collapsible navigation sidebar (Sidebar, SidebarNavButton)
+│   └── styles.py            # Shared Qt stylesheet constants (STYLE_DIALOG, STYLE_BTN_PRIMARY, …)
 └── services/
-    ├── __init__.py      # Exports service classes
-    ├── gee_service.py   # Google Earth Engine business logic
-    ├── aoi_service.py   # AOI extraction and conversion to EE objects
-    ├── dem_service.py   # Downloads DEM GeoTIFF from Google Earth Engine
-    ├── dem_registry.py  # Loads and queries the DEM catalog; checks dataset availability
-    ├── dem_renderer.py  # Color ramp rendering and raster layer styling
+    ├── __init__.py          # Exports service classes
+    ├── gee_service.py       # Google Earth Engine business logic
+    ├── aoi_service.py       # AOI extraction and conversion to EE objects
+    ├── dem_service.py       # Downloads DEM GeoTIFF from Google Earth Engine
+    ├── dem_registry.py      # Loads and queries the DEM catalog; checks dataset availability
+    ├── dem_renderer.py      # Color ramp rendering and raster layer styling
     ├── dataset_manager.py   # Dataset availability queries and UI updates
     ├── settings_manager.py  # Settings persistence (QgsSettings)
-    └── map_utils.py     # Map-related utility functions
+    └── map_utils.py         # Map-related utility functions
 ```
 
 ---
@@ -185,11 +193,45 @@ Contains `SettingsManager`. Handles persistence of user preferences in QGIS sett
 
 ---
 
+## Translations
+
+The plugin ships UI strings in 7 languages: English (default), Portuguese (pt\_BR), French (fr), Italian (it), Spanish (es), Hindi (hi), and Chinese Simplified (zh\_CN).
+
+The translation system follows the Qt standard: `.ts` XML source files are compiled to binary `.qm` files that `QTranslator` loads at runtime. The active locale is read from QGIS (`Settings → Options → General → Override system locale`).
+
+### How it works
+
+`easy.py` installs a `QTranslator` on plugin load and removes it on unload. Every user-visible string in `view/`, `easy_dialog.py`, `dem_handler.py`, and `services/gee_service.py` is wrapped with `_tr()` — a thin helper over `QCoreApplication.translate("EasyDem", text)`.
+
+### Editing translations
+
+Edit the relevant `i18n/easydem_<locale>.ts` file (standard Qt TS XML — one `<message>` per string, `<source>` matches the English literal, `<translation>` holds the target language text), then recompile.
+
+### Compiling `.ts` → `.qm`
+
+OSGeo4W does not bundle `lrelease`. Use the included Python script instead. Run in the **OSGeo4W Shell**:
+
+```bat
+cd C:\OSGeo4W\apps\qgis-ltr\python\plugins\qgis-EasyDEM
+python-qgis-ltr compile_translations.py
+```
+
+This writes a `.qm` binary next to each `.ts` file. Reload the plugin in QGIS to pick up changes.
+
+### Adding a new language
+
+1. Create `i18n/easydem_<locale>.ts` (copy an existing file, update `language=` attribute and all `<translation>` entries).
+2. Add the locale to the mapping in `easy.py` if its 2-char prefix differs from the file suffix (e.g. `'pt': 'pt_BR'`).
+3. Run `compile_translations.py`.
+
+---
+
 ## Adding a New Feature
 
 1. **UI changes** — add widgets in the appropriate page module (`view/auth.py` or `view/download_dem.py`). Attach them to `dialog` so `easy.py` can reach them. Add shared styles to `view/styles.py`.
 2. **Business logic** — add a method to the relevant service (or create a new service file under `services/`).
 3. **Wire them up** — in `easy.py`, connect the new widget's signal to the service method.
+4. **Translations** — wrap every new user-visible string with `_tr()`. Add a matching `<message>` entry to each `i18n/easydem_<locale>.ts` file, then run `compile_translations.py`.
 
 > Keep the dialog ignorant of the GEE SDK. Keep the service ignorant of Qt widgets.
 
@@ -252,7 +294,16 @@ git clone https://github.com/farmanalytica/qgis-EasyDEM
 |---|---|
 | `python -m paver` | Default — installs dependencies into `extlibs/` (alias for `build_extlibs`) |
 | `python -m paver build_extlibs` | Vendors all `requirements.txt` packages into `extlibs/` via `pip --target` |
-| `python -m paver clean_extlibs` | Removpaveres the `extlibs/` directory |
+| `python -m paver clean_extlibs` | Removes the `extlibs/` directory |
+
+**Compile translations**
+
+After editing any `.ts` file, recompile in the **OSGeo4W Shell** (OSGeo4W does not bundle `lrelease`; use the included script instead):
+
+```bat
+cd C:\OSGeo4W\apps\qgis-ltr\python\plugins\qgis-EasyDEM
+python-qgis-ltr compile_translations.py
+```
 
 **Hot-reload during development**
 
