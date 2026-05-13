@@ -97,7 +97,7 @@
     </message>
     <message>
         <source>Auth</source>
-        <translation>Autent.</translation>
+        <translation>Autenticación</translation>
     </message>
     <message>
         <source>Select a layer.</source>

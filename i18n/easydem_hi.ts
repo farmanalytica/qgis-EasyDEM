@@ -97,7 +97,7 @@
     </message>
     <message>
         <source>Auth</source>
-        <translation>प्रमाण.</translation>
+        <translation>प्रमाणीकरण</translation>
     </message>
     <message>
         <source>Select a layer.</source>
