@@ -1,0 +1,3 @@
+# No external packages required.
+# build_plugin.py and compile_translations.py use only Python stdlib.
+# Requires: Python 3.6+ with pip available.
