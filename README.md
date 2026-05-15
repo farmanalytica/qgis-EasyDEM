@@ -26,6 +26,7 @@ qgis-EasyDEM/
 ├── resources.py             # Compiled Qt resources (icons, etc.)
 ├── build_plugin.py          # Full build script — clean extlibs, install deps, compile translations, zip
 ├── compile_translations.py  # Compiles i18n/*.ts → *.qm without needing lrelease
+├── extlibs_manager.py       # Background extlibs downloader (QThread); triggered by __init__.py on first run when extlibs/ is absent
 ├── assets/
 │   └── dem_catalog.json     # DEM dataset definitions (name, collection, band, resolution, bbox)
 ├── i18n/
@@ -60,7 +61,7 @@ qgis-EasyDEM/
 The codebase follows a **UI / Service** separation:
 
 ### `easy.py` — Plugin Controller
-The QGIS plugin entry point. Handles toolbar/menu registration (`initGui`), teardown (`unload`), and launches the dialog (`run`). On first run it instantiates `GEEService`, `DEMHandler`, and connects all dialog signals to their handlers — this is the only place UI and services are wired together.
+The QGIS plugin entry point. Handles toolbar/menu registration (`initGui`), teardown (`unload`), and launches the dialog (`run`). Service instantiation (`GEEService`, `DEMHandler`) and all signal wiring are deferred to `_finish_init()`, which is called only once extlibs are confirmed ready — either already extracted on disk, or after `ExtlibsDownloader` finishes and emits `download_done`. Until extlibs are ready, `run()` shows the loading page and waits for the downloader signal. This is the only place UI and services are wired together.
 
 ### `easy_dialog.py` — UI Layer
 Contains `EasyDemDialog(QDialog)`. Owns the dialog shell only: fixed header, central `QStackedWidget`, and fixed footer. Page widget construction is delegated to `view/auth.py` and `view/download_dem.py`. No knowledge of services or the `ee` SDK — all signal connections are made externally by the controller.
@@ -69,9 +70,9 @@ Internal conventions:
 - `_setup_ui()` — builds header, body row (sidebar + stack), and footer; calls `setup_auth_page` and `setup_download_dem_page`
 - `_build_header()` — white bar with brand label, dynamic page-title label (`_header_title`), and help button
 - `_build_footer()` — FARM Analytica logo and attribution text
-- `show_auth_page()` / `show_aoi_page()` — switch the active stack page
+- `show_loading_page()` / `show_auth_page()` / `show_aoi_page()` — switch the active stack page
 - `_sync_page_state(index)` — connected to `stack.currentChanged`; updates `_header_title` and calls `sidebar.set_active_page()` to keep navigation state in sync regardless of what triggers the page switch
-- Two pages managed by a `QStackedWidget`: `auth_page` shown on first open, `aoi_page` shown after authentication (or via the skip shortcut)
+- Three pages managed by a `QStackedWidget`: `loading_page` (first-run dependency download), `auth_page` (shown once extlibs are ready), `aoi_page` (shown after authentication or via the skip shortcut)
 - Permanent `Sidebar` instance lives in the body row; its `auth_requested` and `download_requested` signals are connected to `_nav_to_auth` and `_nav_to_download`
 
 ### `view/` — Page Modules
@@ -128,19 +129,22 @@ Contains `DEMHandler`. Orchestrates DEM operations and coordinates between servi
 
 | Method | Signature | Purpose |
 |---|---|---|
-| `handle_layer_changed` | `(layer)` | Zooms the map canvas to the selected layer, then updates the stored AOI and refreshes the dataset combobox |
-| `load_available_datasets` | `()` | Delegates to `DatasetManager` to query available datasets in the current AOI |
-| `handle_dem_service` | `(interface)` | Downloads the selected DEM and delegates to `DEMRenderer` to load and style it in QGIS |
+| `handle_layer_changed` | `(layer)` | Zooms the map canvas to the selected layer, then debounces 300 ms before loading the AOI and refreshing the dataset combobox |
+| `load_available_datasets` | `()` | Queries `DEMRegistry` directly; lists all datasets when unauthenticated, otherwise filters by AOI coverage |
+| `handle_dem_service` | `(interface)` | Downloads the selected DEM (with optional buffer) and delegates to `DEMRenderer` to load and style it in QGIS |
 | `handle_folder_selection` | `()` | Opens a folder picker and delegates to `SettingsManager` to persist the choice |
 | `on_dataset_changed` | `()` | Delegates to `DatasetManager` to update the dataset info panel |
+| `handle_hybrid_layer` | `()` | Loads the Google Hybrid basemap via `map_utils.hybrid_function()` and reports success via the message bar |
 
 ### `services/gee_service.py` — GEE Service
 Contains `GEEService`. Imports `ee` and owns all Earth Engine SDK calls.
 
 | Method | Signature | Purpose |
 |---|---|---|
-| `authenticate` | `(project_id: str)` | Authenticates with GEE using the given project |
-| `reset_authentication` | `()` | Clears stored GEE credentials |
+| `get_saved_project_id` | `()` | Returns the saved GCP project ID from `QSettings`, or empty string |
+| `save_project_id` | `(project_id)` | Persists the GCP project ID to `QSettings`; connected to `project_id_input.textChanged` |
+| `authenticate` | `(project_id: str)` | Authenticates with GEE using the given project; sets `is_authenticated = True` on success |
+| `reset_authentication` | `()` | Clears stored GEE credentials and resets `is_authenticated` |
 
 ### `services/aoi_service.py` — AOI Service
 Contains `AOIService`. Extracts geometry from a QGIS layer and converts it to an `ee.FeatureCollection`.
@@ -251,7 +255,7 @@ If you are an AI assistant working on this codebase, read this before making cha
 - New widgets on the AOI/download page → `view/download_dem.py` (`setup_download_dem_page`)
 - Sidebar navigation changes (buttons, icons, expand/collapse behaviour) → `view/sidebar.py`
 - New shared stylesheet constants → `view/styles.py`
-- New signal connections → `easy.py` (inside the `if self.first_start` block in `run()`)
+- New signal connections → `easy.py` (inside `_finish_init()`)
 - New DEM handler/orchestration logic → `dem_handler.py`
 - New rendering/styling logic → `services/dem_renderer.py`
 - New dataset management logic → `services/dataset_manager.py`
