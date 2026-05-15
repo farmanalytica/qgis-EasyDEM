@@ -28,12 +28,13 @@ INCLUDE_FILES = [
     "easy.py",
     "easy_dialog.py",
     "dem_handler.py",
+    "extlibs_manager.py",
     "resources.py",
     "icon.png",
     "LICENSE",
 ]
 
-INCLUDE_DIRS = ["view", "services", "assets", "extlibs"]
+INCLUDE_DIRS = ["view", "services", "assets"]
 
 SKIP = {"__pycache__", ".git", ".github", "dist", ".mypy_cache", ".pytest_cache"}
 

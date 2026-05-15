@@ -34,7 +34,9 @@ if os.path.isdir(_extlibs_path) and _extlibs_path not in sys.path:
 
 
 def classFactory(interface):
+    if not os.path.isdir(_extlibs_path) or not os.listdir(_extlibs_path):
+        from . import extlibs_manager
+        extlibs_manager.start_download()
 
     from .easy import EasyDem
-
     return EasyDem(interface)

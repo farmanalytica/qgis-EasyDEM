@@ -1,0 +1,61 @@
+# -*- coding: utf-8 -*-
+import os
+import sys
+import zipfile
+import urllib.request
+
+from qgis.PyQt.QtCore import QThread, pyqtSignal
+
+EXTLIBS_URL = "https://github.com/farmanalytica/qgis-EasyDEM/raw/main/extlibs.zip"
+_PLUGIN_DIR = os.path.dirname(__file__)
+EXTLIBS_PATH = os.path.join(_PLUGIN_DIR, "extlibs")
+
+_downloader = None
+
+
+def is_ready():
+    return os.path.isdir(EXTLIBS_PATH) and bool(os.listdir(EXTLIBS_PATH))
+
+
+def ensure_on_path():
+    if EXTLIBS_PATH not in sys.path:
+        sys.path.insert(0, EXTLIBS_PATH)
+
+
+def get_downloader():
+    return _downloader
+
+
+def start_download():
+    global _downloader
+    if _downloader is not None and _downloader.isRunning():
+        return _downloader
+    _downloader = ExtlibsDownloader()
+    _downloader.start()
+    return _downloader
+
+
+class ExtlibsDownloader(QThread):
+    download_done = pyqtSignal(bool, str)  # success, error_msg
+
+    def run(self):
+        zip_path = os.path.join(_PLUGIN_DIR, "extlibs.zip")
+        try:
+            urllib.request.urlretrieve(EXTLIBS_URL, zip_path)
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                names = zf.namelist()
+                if names and names[0].startswith("extlibs/"):
+                    zf.extractall(_PLUGIN_DIR)
+                else:
+                    os.makedirs(EXTLIBS_PATH, exist_ok=True)
+                    zf.extractall(EXTLIBS_PATH)
+            ensure_on_path()
+            self.download_done.emit(True, "")
+        except Exception as e:
+            self.download_done.emit(False, str(e))
+        finally:
+            if os.path.exists(zip_path):
+                try:
+                    os.remove(zip_path)
+                except OSError:
+                    pass

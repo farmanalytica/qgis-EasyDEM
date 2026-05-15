@@ -29,14 +29,13 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtCore import QCoreApplication, QTranslator
 from qgis.core import (
+    Qgis,
     QgsProject,
     QgsSettings,
 )
 
 from .resources import *
 from .easy_dialog import EasyDemDialog
-from .dem_handler import DEMHandler
-from .services.gee_service import GEEService
 from .services.settings_manager import SettingsManager
 
 
@@ -55,6 +54,7 @@ class EasyDem:
         self.menu = "&EasyDEM"
 
         self.first_start = None
+        self._waiting_for_extlibs = False
 
         locale = QgsSettings().value('locale/userLocale', 'en_US')
         lang = locale[:2]
@@ -148,8 +148,53 @@ class EasyDem:
             self.interface.removePluginMenu("&EasyDEM", action)
             self.interface.removeToolBarIcon(action)
 
+    def _on_extlibs_ready(self, success, error_msg):
+        self._waiting_for_extlibs = False
+        if success:
+            self.interface.messageBar().pushMessage(
+                "EasyDEM",
+                self.tr("Dependencies ready. Click the EasyDEM button to open."),
+                level=Qgis.Success,
+                duration=8,
+            )
+        else:
+            self.interface.messageBar().pushMessage(
+                "EasyDEM",
+                self.tr("Failed to download dependencies: %s") % error_msg,
+                level=Qgis.Critical,
+                duration=0,
+            )
+
     def run(self):
         """Display the plugin dialog and handle user interaction."""
+        from . import extlibs_manager
+
+        if not extlibs_manager.is_ready():
+            downloader = extlibs_manager.get_downloader()
+            if downloader and downloader.isRunning():
+                if not self._waiting_for_extlibs:
+                    self._waiting_for_extlibs = True
+                    downloader.download_done.connect(self._on_extlibs_ready)
+                self.interface.messageBar().pushMessage(
+                    "EasyDEM",
+                    self.tr("Downloading dependencies, please wait…"),
+                    level=Qgis.Info,
+                    duration=5,
+                )
+            else:
+                self.interface.messageBar().pushMessage(
+                    "EasyDEM",
+                    self.tr("Dependencies missing. Reload the plugin to retry."),
+                    level=Qgis.Warning,
+                    duration=0,
+                )
+            return
+
+        extlibs_manager.ensure_on_path()
+
+        from .services.gee_service import GEEService
+        from .dem_handler import DEMHandler
+
         if self.first_start:
             self.first_start = False
             self.gee_service = GEEService()
