@@ -42,7 +42,10 @@ class ExtlibsDownloader(QThread):
     def run(self):
         zip_path = os.path.join(_PLUGIN_DIR, "extlibs.zip")
         try:
-            urllib.request.urlretrieve(EXTLIBS_URL, zip_path)
+            if not EXTLIBS_URL.startswith("https://"):
+                raise ValueError(f"Unexpected URL scheme: {EXTLIBS_URL}")
+            with urllib.request.urlopen(EXTLIBS_URL) as resp, open(zip_path, "wb") as f:  # nosec B310
+                f.write(resp.read())
             with zipfile.ZipFile(zip_path, "r") as zf:
                 names = zf.namelist()
                 if names and names[0].startswith("extlibs/"):
