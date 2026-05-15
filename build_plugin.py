@@ -23,6 +23,7 @@ ZIP_PATH = DIST_DIR / f"{PLUGIN_NAME}.zip"
 
 INCLUDE_FILES = [
     "metadata.txt",
+    "setup.cfg",
     "__init__.py",
     "easy.py",
     "easy_dialog.py",
