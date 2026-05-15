@@ -9,12 +9,13 @@ from qgis.PyQt.QtCore import QThread, pyqtSignal
 EXTLIBS_URL = "https://github.com/farmanalytica/qgis-EasyDEM/raw/main/extlibs.zip"
 _PLUGIN_DIR = os.path.dirname(__file__)
 EXTLIBS_PATH = os.path.join(_PLUGIN_DIR, "extlibs")
+_SENTINEL = os.path.join(EXTLIBS_PATH, ".ready")
 
 _downloader = None
 
 
 def is_ready():
-    return os.path.isdir(EXTLIBS_PATH) and bool(os.listdir(EXTLIBS_PATH))
+    return os.path.isfile(_SENTINEL)
 
 
 def ensure_on_path():
@@ -49,6 +50,7 @@ class ExtlibsDownloader(QThread):
                 else:
                     os.makedirs(EXTLIBS_PATH, exist_ok=True)
                     zf.extractall(EXTLIBS_PATH)
+            open(_SENTINEL, "w").close()
             ensure_on_path()
             self.download_done.emit(True, "")
         except Exception as e:
