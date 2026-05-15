@@ -155,8 +155,8 @@ def build_zip() -> None:
 
 def main() -> None:
     print(f"Building {PLUGIN_NAME} ...")
-    clean_extlibs()
-    build_extlibs()
+    #clean_extlibs()
+    #build_extlibs()
     compile_translations()
     build_zip()
 
