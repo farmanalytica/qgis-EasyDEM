@@ -55,6 +55,7 @@ class EasyDem:
 
         self.first_start = None
         self._waiting_for_extlibs = False
+        self._services_ready = False
 
         locale = QgsSettings().value('locale/userLocale', 'en_US')
         lang = locale[:2]
@@ -148,98 +149,65 @@ class EasyDem:
             self.interface.removePluginMenu("&EasyDEM", action)
             self.interface.removeToolBarIcon(action)
 
+    def _finish_init(self):
+        from .services.gee_service import GEEService
+        from .dem_handler import DEMHandler
+
+        self._services_ready = True
+        self.gee_service = GEEService()
+        self.dem_handler = DEMHandler(self.dlg, self.gee_service, self.interface)
+
+        saved_project_id = self.gee_service.get_saved_project_id()
+        if saved_project_id:
+            self.dlg.project_id_input.setText(saved_project_id)
+
+        self.dlg.project_id_input.textChanged.connect(self.gee_service.save_project_id)
+        self.dlg.btn_authenticate.clicked.connect(self.handle_authentication)
+        self.dlg.btn_reset_auth.clicked.connect(self.handle_reset_authentication)
+        self.dlg.btn_download_dem.clicked.connect(
+            lambda: self.dem_handler.handle_dem_service(self.interface)
+        )
+        self.dlg.layer_combo.layerChanged.connect(self.dem_handler.handle_layer_changed)
+        self.dlg.dem_combo.currentIndexChanged.connect(self.dem_handler.on_dataset_changed)
+        self.dlg.btn_go_to_aoi.clicked.connect(self.dem_handler.load_available_datasets)
+        self.dlg.btn_browse_folder.clicked.connect(self.dem_handler.handle_folder_selection)
+        self.dlg.btn_hybrid_layer.clicked.connect(self.dem_handler.handle_hybrid_layer)
+
+        saved_folder = SettingsManager.load_download_folder()
+        if saved_folder:
+            self.dlg.folder_input.setText(saved_folder)
+
     def _on_extlibs_ready(self, success, error_msg):
         self._waiting_for_extlibs = False
         if success:
-            self.interface.messageBar().pushMessage(
-                "EasyDEM",
-                self.tr("Dependencies ready. Click the EasyDEM button to open."),
-                level=Qgis.Success,
-                duration=8,
-            )
+            from . import extlibs_manager
+            extlibs_manager.ensure_on_path()
+            self._finish_init()
+            self.dlg.show_auth_page()
         else:
-            self.interface.messageBar().pushMessage(
-                "EasyDEM",
+            self.dlg.pop_message(
                 self.tr("Failed to download dependencies: %s") % error_msg,
-                level=Qgis.Critical,
-                duration=0,
+                "warning",
             )
 
     def run(self):
         """Display the plugin dialog and handle user interaction."""
         from . import extlibs_manager
 
-        if not extlibs_manager.is_ready():
-            downloader = extlibs_manager.get_downloader()
-            if downloader and downloader.isRunning():
-                if not self._waiting_for_extlibs:
-                    self._waiting_for_extlibs = True
-                    downloader.download_done.connect(self._on_extlibs_ready)
-                self.interface.messageBar().pushMessage(
-                    "EasyDEM",
-                    self.tr("Downloading dependencies, please wait…"),
-                    level=Qgis.Info,
-                    duration=5,
-                )
-            else:
-                self.interface.messageBar().pushMessage(
-                    "EasyDEM",
-                    self.tr("Dependencies missing. Reload the plugin to retry."),
-                    level=Qgis.Warning,
-                    duration=0,
-                )
-            return
-
-        extlibs_manager.ensure_on_path()
-
-        from .services.gee_service import GEEService
-        from .dem_handler import DEMHandler
-
         if self.first_start:
             self.first_start = False
-            self.gee_service = GEEService()
             self.dlg = EasyDemDialog(self.interface.mainWindow())
-            self.dem_handler = DEMHandler(self.dlg, self.gee_service, self.interface)
 
-            saved_project_id = self.gee_service.get_saved_project_id()
-            if saved_project_id:
-                self.dlg.project_id_input.setText(saved_project_id)
-
-            self.dlg.project_id_input.textChanged.connect(
-                self.gee_service.save_project_id
-            )
-
-            self.dlg.btn_authenticate.clicked.connect(self.handle_authentication)
-
-            self.dlg.btn_reset_auth.clicked.connect(self.handle_reset_authentication)
-
-            self.dlg.btn_download_dem.clicked.connect(
-                lambda: self.dem_handler.handle_dem_service(self.interface)
-            )
-
-            self.dlg.layer_combo.layerChanged.connect(
-                self.dem_handler.handle_layer_changed
-            )
-
-            self.dlg.dem_combo.currentIndexChanged.connect(
-                self.dem_handler.on_dataset_changed
-            )
-
-            self.dlg.btn_go_to_aoi.clicked.connect(
-                self.dem_handler.load_available_datasets
-            )
-
-            self.dlg.btn_browse_folder.clicked.connect(
-                self.dem_handler.handle_folder_selection
-            )
-
-            self.dlg.btn_hybrid_layer.clicked.connect(
-                self.dem_handler.handle_hybrid_layer
-            )
-
-            saved_folder = SettingsManager.load_download_folder()
-            if saved_folder:
-                self.dlg.folder_input.setText(saved_folder)
+        if not self._services_ready:
+            if extlibs_manager.is_ready():
+                extlibs_manager.ensure_on_path()
+                self._finish_init()
+            else:
+                self.dlg.show_loading_page()
+                downloader = extlibs_manager.get_downloader()
+                if downloader and not self._waiting_for_extlibs:
+                    self._waiting_for_extlibs = True
+                    downloader.download_done.connect(self._on_extlibs_ready)
 
         self.dlg.show()
         result = self.dlg.exec() if hasattr(self.dlg, "exec") else self.dlg.exec_()

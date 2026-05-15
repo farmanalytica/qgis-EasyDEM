@@ -29,6 +29,7 @@ from qgis.PyQt.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
+    QProgressBar,
     QPushButton,
     QSizePolicy,
     QStackedWidget,
@@ -138,12 +139,14 @@ class EasyDemDialog(QDialog):
 
         body_lay.addWidget(right_col, 1)
 
+        self.loading_page = self._build_loading_page()
         self.auth_page = QWidget()
         self.aoi_page = QWidget()
 
         setup_auth_page(self, self.auth_page)
         setup_download_dem_page(self, self.aoi_page)
 
+        self.stack.addWidget(self.loading_page)
         self.stack.addWidget(self.auth_page)
         self.stack.addWidget(self.aoi_page)
         self.stack.currentChanged.connect(self._sync_page_state)
@@ -152,6 +155,43 @@ class EasyDemDialog(QDialog):
         self._sync_page_state(self.stack.currentIndex())
 
         root.addWidget(body, 1)
+
+    # -----------------------------------------------------------------------
+    # LOADING PAGE
+    # -----------------------------------------------------------------------
+
+    def _build_loading_page(self):
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(48, 0, 48, 24)
+        lay.setSpacing(12)
+        lay.addStretch()
+
+        title = QLabel(_tr("Setting up EasyDEM…"))
+        title.setStyleSheet(
+            "color: #1b6b39; font-size: 14px; font-weight: bold;"
+        )
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(title)
+
+        sub = QLabel(_tr("Downloading dependencies. This only happens on first use."))
+        sub.setStyleSheet("color: #616161; font-size: 10px;")
+        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(sub)
+
+        bar = QProgressBar()
+        bar.setRange(0, 0)
+        bar.setFixedHeight(6)
+        bar.setTextVisible(False)
+        bar.setStyleSheet(
+            "QProgressBar { border: none; border-radius: 3px; background: #e0e0e0; }"
+            "QProgressBar::chunk { background: #1b6b39; border-radius: 3px; }"
+        )
+        lay.addWidget(bar)
+        self._loading_bar = bar
+
+        lay.addStretch()
+        return page
 
     # -----------------------------------------------------------------------
     # HEADER
@@ -284,6 +324,10 @@ class EasyDemDialog(QDialog):
     # PUBLIC METHODS
     # -----------------------------------------------------------------------
 
+    def show_loading_page(self):
+        """Switch the stacked widget to the loading/download page."""
+        self.stack.setCurrentWidget(self.loading_page)
+
     def show_aoi_page(self):
         """Switch the stacked widget to the AOI selection page."""
         self.stack.setCurrentWidget(self.aoi_page)
@@ -305,13 +349,21 @@ class EasyDemDialog(QDialog):
 
     def _sync_page_state(self, index):
         """Keep header and sidebar state aligned with the current stack page."""
-        if self.stack.widget(index) is self.auth_page:
+        current = self.stack.widget(index)
+
+        if current is self.loading_page:
+            self._header_title.setText(_tr("Setting up…"))
+            self.sidebar.set_active_page(None)
+            self.footer.setVisible(True)
+            return
+
+        if current is self.auth_page:
             self._header_title.setText(_tr("GEE Configuration"))
             self.sidebar.set_active_page("auth")
             self.footer.setVisible(True)
             return
 
-        if self.stack.widget(index) is self.aoi_page:
+        if current is self.aoi_page:
             self._header_title.setText(_tr("Inputs & Parameters"))
             self.sidebar.set_active_page("download")
             self.footer.setVisible(False)
