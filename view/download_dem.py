@@ -38,6 +38,7 @@ def _tr(text):
 # Custom widget
 # ---------------------------------------------------------------------------
 
+
 class LimitedPopupComboBox(QComboBox):
     """ComboBox with a bounded popup height for long catalogs."""
 
@@ -85,6 +86,7 @@ class LimitedPopupComboBox(QComboBox):
 # ---------------------------------------------------------------------------
 # STEP 2 — AOI and DEM inputs
 # ---------------------------------------------------------------------------
+
 
 def setup_download_dem_page(dialog, page):
     """
@@ -151,6 +153,7 @@ def setup_download_dem_page(dialog, page):
     aoi_row_lay.setSpacing(6)
 
     dialog.layer_combo = QgsMapLayerComboBox()
+    dialog.layer_combo.setAllowEmptyLayer(True)
     dialog.layer_combo.setObjectName("layerCombo")
     dialog.layer_combo.setFilters(QgsMapLayerProxyModel.PolygonLayer)
     dialog.layer_combo.setFixedHeight(28)
@@ -218,7 +221,9 @@ def setup_download_dem_page(dialog, page):
     scroll_lay.addWidget(buffer_lbl)
 
     buffer_desc = QLabel(
-        _tr("Use a positive buffer to include terrain just outside your area, or a negative buffer to crop the edges.")
+        _tr(
+            "Use a positive buffer to include terrain just outside your area, or a negative buffer to crop the edges."
+        )
     )
     buffer_desc.setWordWrap(True)
     buffer_desc.setStyleSheet("color: #757575; font-size: 9px;")
