@@ -65,6 +65,12 @@ class DEMHandler:
                 self.dlg.pop_message(_tr("Select a layer."), "warning")
                 return
 
+            if not self.gee_service.is_authenticated:
+                self.current_aoi = None
+                self.current_aoi_bbox = None
+                self.load_available_datasets()
+                return
+
             self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(
                 layer
             )
@@ -137,11 +143,18 @@ class DEMHandler:
         Args:
             layer: The newly selected layer.
         """
+
         if not layer or not layer.isValid():
             self._debounce_timer.stop()
             self.current_aoi = None
             self.current_aoi_bbox = None
             self.dlg.dem_combo.clear()
+            return
+
+        if not self.gee_service.is_authenticated:
+            self._debounce_timer.stop()
+            self.current_aoi = None
+            self.current_aoi_bbox = None
             return
 
         canvas = self.interface.mapCanvas()
@@ -158,6 +171,9 @@ class DEMHandler:
         self._pending_layer = layer
         self._debounce_timer.start(300)
 
+    def handle_layer_activated(self, *args):
+        self.handle_layer_changed(self.dlg.layer_combo.currentLayer())
+
     def _load_aoi_for_pending_layer(self):
         """Load AOI and available datasets for the debounced pending layer."""
         layer = self._pending_layer
@@ -165,6 +181,10 @@ class DEMHandler:
             self.current_aoi = None
             self.current_aoi_bbox = None
             self.dlg.dem_combo.clear()
+            return
+        if not self.gee_service.is_authenticated:
+            self.current_aoi = None
+            self.current_aoi_bbox = None
             return
         try:
             self.current_aoi, self.current_aoi_bbox = AOIService.get_aoi_from_layer(

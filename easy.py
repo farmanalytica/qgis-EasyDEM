@@ -57,12 +57,12 @@ class EasyDem:
         self._waiting_for_extlibs = False
         self._services_ready = False
 
-        locale = QgsSettings().value('locale/userLocale', 'en_US')
+        locale = QgsSettings().value("locale/userLocale", "en_US")
         lang = locale[:2]
-        locale_map = {'pt': 'pt_BR', 'zh': 'zh_CN'}
+        locale_map = {"pt": "pt_BR", "zh": "zh_CN"}
         qm_lang = locale_map.get(lang, lang)
         self._translator = QTranslator()
-        qm_path = os.path.join(self.plugin_dir, 'i18n', f'easydem_{qm_lang}.qm')
+        qm_path = os.path.join(self.plugin_dir, "i18n", f"easydem_{qm_lang}.qm")
         if os.path.exists(qm_path):
             self._translator.load(qm_path)
             QCoreApplication.installTranslator(self._translator)
@@ -167,10 +167,14 @@ class EasyDem:
         self.dlg.btn_download_dem.clicked.connect(
             lambda: self.dem_handler.handle_dem_service(self.interface)
         )
-        self.dlg.layer_combo.layerChanged.connect(self.dem_handler.handle_layer_changed)
-        self.dlg.dem_combo.currentIndexChanged.connect(self.dem_handler.on_dataset_changed)
+        self.dlg.layer_combo.activated.connect(self.dem_handler.handle_layer_activated)
+        self.dlg.dem_combo.currentIndexChanged.connect(
+            self.dem_handler.on_dataset_changed
+        )
         self.dlg.btn_go_to_aoi.clicked.connect(self.dem_handler.load_available_datasets)
-        self.dlg.btn_browse_folder.clicked.connect(self.dem_handler.handle_folder_selection)
+        self.dlg.btn_browse_folder.clicked.connect(
+            self.dem_handler.handle_folder_selection
+        )
         self.dlg.btn_hybrid_layer.clicked.connect(self.dem_handler.handle_hybrid_layer)
 
         saved_folder = SettingsManager.load_download_folder()
@@ -181,6 +185,7 @@ class EasyDem:
         self._waiting_for_extlibs = False
         if success:
             from . import extlibs_manager
+
             extlibs_manager.ensure_on_path()
             self._finish_init()
             self.dlg.show_auth_page()
