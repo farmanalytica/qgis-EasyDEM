@@ -75,8 +75,52 @@ class EasyDemDialog(QDialog):
 
     def __init__(self, parent=None):
         self._qgis_parent = parent
-        super().__init__(parent)
+        # Do not pass ``parent`` to QDialog: a Qt-child top-level window has no
+        # taskbar button on Windows, so minimizing collapses it to a tiny stub in
+        # the screen corner instead of going to the taskbar. Stacking above QGIS is
+        # restored via a transient parent in ``showEvent``, and the missing taskbar
+        # button (a side effect of the owner relationship) is forced back with the
+        # WS_EX_APPWINDOW extended style. Result: floats above QGIS *and* minimizes
+        # to the taskbar like a normal window.
+        super().__init__(None)
+        self._win_configured = False
         self._setup_ui()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._win_configured:
+            return
+        self._win_configured = True
+        self._configure_native_window()
+
+    def _configure_native_window(self):
+        """Float above QGIS (transient parent) while keeping a taskbar button."""
+        handle = self.windowHandle()
+        if handle is not None and self._qgis_parent is not None:
+            parent_handle = self._qgis_parent.windowHandle()
+            if parent_handle is not None:
+                handle.setTransientParent(parent_handle)
+
+        if os.name != "nt":
+            return
+        try:
+            import ctypes
+
+            GWL_EXSTYLE = -20
+            WS_EX_APPWINDOW = 0x00040000
+            WS_EX_TOOLWINDOW = 0x00000080
+            user32 = ctypes.windll.user32
+            hwnd = int(self.winId())
+            style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            new_style = (style | WS_EX_APPWINDOW) & ~WS_EX_TOOLWINDOW
+            if new_style != style:
+                user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)
+                # Re-show so the taskbar registers the button. Guarded by
+                # ``_win_configured`` above, so this does not recurse.
+                self.hide()
+                self.show()
+        except Exception:
+            pass
 
     def _setup_ui(self):
         """Build the main layout: fixed header, central stack, fixed footer."""
