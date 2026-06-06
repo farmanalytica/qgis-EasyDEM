@@ -16,22 +16,18 @@ class SettingsManager:
 
     @staticmethod
     def save_download_folder(folder_path: str) -> None:
-        """
-        Persist the chosen download folder in QGIS settings.
 
-        Args:
-            folder_path: Absolute path to the download folder.
-        """
         settings = QgsSettings()
         settings.setValue(SettingsManager.DOWNLOAD_FOLDER_KEY, folder_path)
 
     @staticmethod
-    def load_download_folder() -> str:
-        """
-        Return the previously saved download folder, or empty string if not set.
+    def clear_download_folder() -> None:
 
-        Returns:
-            Absolute path to the saved download folder, or empty string.
-        """
+        settings = QgsSettings()
+        settings.remove(SettingsManager.DOWNLOAD_FOLDER_KEY)
+
+    @staticmethod
+    def load_download_folder() -> str:
+
         settings = QgsSettings()
         return settings.value(SettingsManager.DOWNLOAD_FOLDER_KEY, "", type=str)

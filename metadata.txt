@@ -7,7 +7,7 @@ name=EasyDEM
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=Download and visualise Digital Elevation Models via Google Earth Engine / Baixe e visualize Modelos Digitais de Elevação via Google Earth Engine
-version=4.0
+version=4.1
 author=Caio Arantes, Leandro Eloi, Lívia Scopel
 email=contato@farmanalytica.com.br
 
@@ -20,7 +20,14 @@ repository=https://github.com/farmanalytica/qgis-EasyDEM
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=4.0
+changelog=4.1
+    - Non-blocking UI: authentication, sign-in status, dataset availability and DEM downloads now run on background threads
+    - Sign-in status pill with silent re-authentication and cancellable browser sign-in
+    - Draw AOI directly on the map canvas (saved as a shapefile and auto-selected)
+    - Download folder moved to the authentication page, with a clear button
+    - Restructured codebase into controllers, managers, renderers, tools and workers
+
+    4.0
     - Expanded DEM catalog with additional global and regional datasets
     - Automatic detection of datasets available for the selected AOI
 

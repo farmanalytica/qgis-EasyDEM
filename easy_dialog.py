@@ -2,17 +2,16 @@
 """
 UI layer for the EasyDEM QGIS plugin.
 
-Defines ``EasyDemDialog``, a two-page modal dialog that guides the user
-through the full plugin workflow:
+Defines ``EasyDemDialog``, a two-page dialog that guides the user through the
+full plugin workflow:
 
-1. **Authentication page** (``auth_page``) — user supplies a Google Cloud
-   project ID and validates GEE access, or browses datasets without
-   authenticating.
-2. **AOI page** (``aoi_page``) — user selects a polygon layer as the Area
-   of Interest, picks a DEM dataset, sets an AOI buffer, chooses a download
-   folder, and triggers the download.
+1. **Authentication page** — user supplies a Google Cloud project ID and
+   validates GEE access, chooses a download folder, or browses datasets
+   without authenticating.
+2. **DEM page** — user selects (or draws) a polygon layer as the Area of
+   Interest, picks a DEM dataset, sets an AOI buffer and triggers the download.
 
-This module owns the dialog shell only.  Page widget construction lives in
+This module owns the dialog shell only. Page widget construction lives in
 ``view/auth.py`` and ``view/download_dem.py``, while signal connections are
 made externally by ``easy.py`` to keep this module free of business logic
 and the ``ee`` SDK.
@@ -51,32 +50,23 @@ class EasyDemDialog(QDialog):
     """
     Main dialog window for the EasyDEM plugin.
 
-    Presents a two-page ``QStackedWidget`` flow:
-
-    - ``auth_page`` — shown on first open; collects the GCP project ID and
-      validates Google Earth Engine credentials, or lets the user skip to the
-      AOI page to browse available datasets.
-    - ``aoi_page`` — shown after authentication; allows the user to select a
-      polygon AOI layer, browse DEM datasets, adjust the AOI buffer, choose a
-      download folder, and trigger the download.
-
-    Public widget attributes created by the page modules (consumed by
-    ``easy.py`` and ``dem_handler.py``):
-
     Auth page:
         project_id_input: GCP project ID field.
         btn_authenticate: Triggers GEE authentication.
         btn_reset_auth: Clears existing GEE credentials.
-        btn_go_to_aoi: Navigates to the AOI page without authenticating.
-
-    AOI page:
-        layer_combo: Polygon layer selector.
-        dem_combo: Lists DEM datasets available for the AOI.
-        dem_info: Displays metadata for the selected dataset.
-        buffer_slider: AOI buffer control (−300 m … +300 m).
-        buffer_value_lbl: Live label showing the current buffer value.
+        auth_status_badge: Clickable sign-in status pill.
         folder_input: Download destination path field.
         btn_browse_folder: Opens the folder picker dialog.
+        btn_clear_folder: Clears the chosen download folder.
+        btn_go_to_aoi: Navigates to the DEM page (loading datasets first).
+
+    DEM page:
+        layer_combo: Polygon layer selector.
+        btn_draw_aoi: Toggles interactive rectangle AOI drawing.
+        dem_combo: Lists DEM datasets available for the AOI.
+        dem_info: Displays metadata for the selected dataset.
+        buffer_slider: AOI buffer control (-300 m ... +300 m).
+        buffer_value_lbl: Live label showing the current buffer value.
         btn_hybrid_layer: Adds a Google Hybrid basemap layer.
         btn_download_dem: Downloads and loads the DEM into QGIS.
 
@@ -85,198 +75,175 @@ class EasyDemDialog(QDialog):
 
     def __init__(self, parent=None):
         self._qgis_parent = parent
-        super().__init__(None)
+        super().__init__(parent)
         self._setup_ui()
 
     def _setup_ui(self):
-        """Build the root layout: fixed header, central stack, fixed footer."""
+        """Build the main layout: fixed header, central stack, fixed footer."""
         self.setWindowTitle("EasyDEM")
         self.setWindowFlags(
             Qt.WindowType.Window
             | Qt.WindowType.WindowSystemMenuHint
             | Qt.WindowType.WindowTitleHint
             | Qt.WindowType.WindowMinimizeButtonHint
+            | Qt.WindowType.WindowMaximizeButtonHint
             | Qt.WindowType.WindowCloseButtonHint
-            | Qt.WindowType.WindowStaysOnTopHint
         )
         self.setWindowModality(Qt.WindowModality.NonModal)
-        self.setFixedSize(800, 404)
+
+        self.setMinimumSize(800, 534)
+        self.resize(800, 534)
+        self.setSizeGripEnabled(True)
         self.setStyleSheet(STYLE_DIALOG)
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        root.addWidget(self._build_header())
+        main_layout.addWidget(self._build_header())
 
-        # Body row: permanent sidebar + page stack.
-        body = QWidget()
-        body.setStyleSheet("background-color: #f5f5f5;")
-        body_lay = QHBoxLayout(body)
-        body_lay.setContentsMargins(0, 0, 0, 0)
-        body_lay.setSpacing(8)
+        body_container = QWidget()
+        body_container.setStyleSheet("background-color: #f5f5f5;")
+        body_layout = QHBoxLayout(body_container)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(2)
 
         self.sidebar = Sidebar()
         self.sidebar.auth_requested.connect(self._nav_to_auth)
-        self.sidebar.download_requested.connect(self._nav_to_download)
-        body_lay.addWidget(self.sidebar)
+        self.sidebar.download_requested.connect(self._nav_to_dem)
+        body_layout.addWidget(self.sidebar)
 
-        # Right column: stack + footer stacked vertically, outside the sidebar.
-        right_col = QWidget()
-        right_col.setStyleSheet("background-color: #f5f5f5;")
-        right_lay = QVBoxLayout(right_col)
-        right_lay.setContentsMargins(0, 0, 0, 0)
-        right_lay.setSpacing(0)
+        content_container = QWidget()
+        content_container.setStyleSheet("background-color: #f5f5f5;")
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         self.stack = QStackedWidget()
         self.stack.setFrameShape(QFrame.Shape.NoFrame)
         self.stack.setLineWidth(0)
         self.stack.setStyleSheet("background-color: #f5f5f5;")
-        right_lay.addWidget(self.stack, 1)
+        content_layout.addWidget(self.stack, 1)
 
         self.footer = self._build_footer()
-        right_lay.addWidget(self.footer)
+        content_layout.addWidget(self.footer)
 
-        body_lay.addWidget(right_col, 1)
+        body_layout.addWidget(content_container, 1)
 
         self.loading_page = self._build_loading_page()
         self.auth_page = QWidget()
-        self.aoi_page = QWidget()
+        self.dem_page = QWidget()
 
         setup_auth_page(self, self.auth_page)
-        setup_download_dem_page(self, self.aoi_page)
+        setup_download_dem_page(self, self.dem_page)
 
         self.stack.addWidget(self.loading_page)
         self.stack.addWidget(self.auth_page)
-        self.stack.addWidget(self.aoi_page)
+        self.stack.addWidget(self.dem_page)
         self.stack.currentChanged.connect(self._sync_page_state)
 
         self.stack.setCurrentWidget(self.auth_page)
         self._sync_page_state(self.stack.currentIndex())
 
-        root.addWidget(body, 1)
-
-    # -----------------------------------------------------------------------
-    # LOADING PAGE
-    # -----------------------------------------------------------------------
+        main_layout.addWidget(body_container, 1)
 
     def _build_loading_page(self):
-        page = QWidget()
-        lay = QVBoxLayout(page)
-        lay.setContentsMargins(48, 0, 48, 24)
-        lay.setSpacing(12)
-        lay.addStretch()
+        loading_page = QWidget()
+        loading_layout = QVBoxLayout(loading_page)
+        loading_layout.setContentsMargins(48, 0, 48, 24)
+        loading_layout.setSpacing(12)
+        loading_layout.addStretch()
 
         title = QLabel(_tr("Setting up EasyDEM…"))
-        title.setStyleSheet(
-            "color: #1b6b39; font-size: 14px; font-weight: bold;"
-        )
+        title.setStyleSheet("color: #1b6b39; font-size: 14px; font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(title)
+        loading_layout.addWidget(title)
 
-        sub = QLabel(_tr("Downloading dependencies. This only happens on first use."))
-        sub.setStyleSheet("color: #616161; font-size: 10px;")
-        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(sub)
+        subtitle = QLabel(
+            _tr("Downloading dependencies. This only happens on first use.")
+        )
+        subtitle.setStyleSheet("color: #616161; font-size: 10px;")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_layout.addWidget(subtitle)
 
-        bar = QProgressBar()
-        bar.setRange(0, 0)
-        bar.setFixedHeight(6)
-        bar.setTextVisible(False)
-        bar.setStyleSheet(
+        progress_bar = QProgressBar()
+        progress_bar.setRange(0, 0)
+        progress_bar.setFixedHeight(6)
+        progress_bar.setTextVisible(False)
+        progress_bar.setStyleSheet(
             "QProgressBar { border: none; border-radius: 3px; background: #e0e0e0; }"
             "QProgressBar::chunk { background: #1b6b39; border-radius: 3px; }"
         )
-        lay.addWidget(bar)
-        self._loading_bar = bar
+        loading_layout.addWidget(progress_bar)
+        self._loading_bar = progress_bar
 
-        lay.addStretch()
-        return page
-
-    # -----------------------------------------------------------------------
-    # HEADER
-    # -----------------------------------------------------------------------
+        loading_layout.addStretch()
+        return loading_page
 
     def _build_header(self):
         """
         Build and return the dialog header widget.
 
-        The header is a fixed-height (38 px) white bar containing:
-        - The "EasyDEM" brand label (green).
-        - A vertical separator.
-        - A dynamic page-title label (``_header_title``) updated by the
-          controller when the active page changes.
-        - A "?" help button that opens the documentation URL in the browser.
+        Fixed-height white bar with the brand label, a vertical separator, a
+        dynamic page-title label, and a "?" help button that opens the
+        documentation URL in the browser.
         """
         header = QWidget()
         header.setFixedHeight(38)
         header.setStyleSheet("background-color: #ffffff;")
 
-        lay = QHBoxLayout(header)
-        lay.setContentsMargins(28, 0, 20, 0)
-        lay.setSpacing(0)
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(28, 0, 20, 0)
+        header_layout.setSpacing(0)
 
-        # Brand name — always green, always visible.
         brand = QLabel("EasyDEM")
         brand.setStyleSheet(
             "color: #1b6b39; font-size: 13px; font-weight: bold; letter-spacing: 0.5px;"
         )
-        lay.addWidget(brand)
+        header_layout.addWidget(brand)
 
-        # Thin vertical divider between brand and page title.
-        sep_lbl = QLabel("  |")
-        sep_lbl.setStyleSheet("color: #d0d0d0; font-size: 16px;")
-        lay.addWidget(sep_lbl)
+        separator = QLabel("  |")
+        separator.setStyleSheet("color: #d0d0d0; font-size: 16px;")
+        header_layout.addWidget(separator)
 
-        # Dynamic title updated by show_auth_page / show_aoi_page.
         self._header_title = QLabel(_tr("GEE Configuration"))
         self._header_title.setStyleSheet(
             "color: #616161; font-size: 13px; margin-left: 4px;"
         )
-        lay.addWidget(self._header_title)
+        header_layout.addWidget(self._header_title)
 
-        lay.addStretch()
+        header_layout.addStretch()
 
-        # Help button — opens the plugin documentation in the default browser.
         self.browser = QPushButton("?")
         self.browser.setFixedSize(28, 28)
         self.browser.setToolTip(_tr("Learn more"))
         self.browser.setStyleSheet(STYLE_BTN_HELP)
         self.browser.clicked.connect(
-            lambda: QDesktopServices.openUrl(
-                QUrl("https://easydem.org")
-            )
+            lambda: QDesktopServices.openUrl(QUrl("https://easydem.org"))
         )
-        lay.addWidget(self.browser)
+        header_layout.addWidget(self.browser)
 
         return header
-
-    # -----------------------------------------------------------------------
-    # FOOTER
-    # -----------------------------------------------------------------------
 
     def _build_footer(self):
         """
         Build and return the dialog footer widget.
 
-        The footer is a fixed-height (52 px) white bar containing the FARM
-        Analytica logo (loaded from ``assets/farm_analytica_logo.svg``) and a
+        The footer is a white bar containing the FARM Analytica logo and a
         short attribution text with a clickable link to the FARM Analytica
-        website.  If the SVG file is not found, the logo falls back to a
-        plain-text label.
+        website.
         """
         footer = QWidget()
-        footer.setFixedHeight(36)
+        footer.setMinimumHeight(36)
         footer.setStyleSheet(
             "background-color: transparent;"
             "QLabel { border: none; background: transparent; }"
         )
 
-        lay = QHBoxLayout(footer)
-        lay.setContentsMargins(28, 4, 28, 4)
-        lay.setSpacing(8)
+        footer_layout = QHBoxLayout(footer)
+        footer_layout.setContentsMargins(28, 4, 28, 4)
+        footer_layout.setSpacing(8)
 
-        # FARM Analytica logo — falls back to plain text if SVG is missing.
         farm_icon = QLabel()
         farm_icon.setFixedHeight(16)
         farm_icon.setStyleSheet("background: transparent;")
@@ -299,13 +266,12 @@ class EasyDemDialog(QDialog):
         farm_icon.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
-        lay.addWidget(farm_icon)
+        footer_layout.addWidget(farm_icon)
 
-        # Attribution copy with an external link to the FARM Analytica website.
         farm_text = QLabel()
         farm_text.setTextFormat(Qt.TextFormat.RichText)
         farm_text.setOpenExternalLinks(True)
-        farm_text.setWordWrap(False)
+        farm_text.setWordWrap(True)
         farm_text.setText(
             _tr("This is a free and open project, supported by ")
             + '<a href="https://farmanalytica.com.br" style="color:#1b6b39;'
@@ -316,21 +282,17 @@ class EasyDemDialog(QDialog):
         farm_text.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
-        lay.addWidget(farm_text)
+        footer_layout.addWidget(farm_text)
 
         return footer
-
-    # -----------------------------------------------------------------------
-    # PUBLIC METHODS
-    # -----------------------------------------------------------------------
 
     def show_loading_page(self):
         """Switch the stacked widget to the loading/download page."""
         self.stack.setCurrentWidget(self.loading_page)
 
-    def show_aoi_page(self):
-        """Switch the stacked widget to the AOI selection page."""
-        self.stack.setCurrentWidget(self.aoi_page)
+    def show_dem_page(self):
+        """Switch the stacked widget to the AOI/DEM selection page."""
+        self.stack.setCurrentWidget(self.dem_page)
 
     def show_auth_page(self):
         """Switch the stacked widget to the authentication page."""
@@ -340,12 +302,12 @@ class EasyDemDialog(QDialog):
         """Sidebar auth button — always navigates to the auth page."""
         self.show_auth_page()
 
-    def _nav_to_download(self):
+    def _nav_to_dem(self):
         """Sidebar download button follows the existing dataset-loading path."""
         if hasattr(self, "btn_go_to_aoi"):
             self.btn_go_to_aoi.click()
             return
-        self.show_aoi_page()
+        self.show_dem_page()
 
     def _sync_page_state(self, index):
         """Keep header and sidebar state aligned with the current stack page."""
@@ -363,10 +325,91 @@ class EasyDemDialog(QDialog):
             self.footer.setVisible(True)
             return
 
-        if current is self.aoi_page:
+        if current is self.dem_page:
             self._header_title.setText(_tr("Inputs & Parameters"))
             self.sidebar.set_active_page("download")
             self.footer.setVisible(False)
+
+    def set_auth_busy(self, busy):
+        """
+        Toggle the auth page between idle and in-progress states.
+
+        While busy the project-ID field and the reset/browse buttons are
+        disabled, and the primary button becomes a Cancel control.
+        """
+        self._auth_busy = busy
+        self.project_id_input.setEnabled(not busy)
+        self.btn_reset_auth.setEnabled(not busy)
+        self.btn_browse_folder.setEnabled(not busy)
+        self.auth_status_badge.setEnabled(not busy)
+
+        if busy:
+            self.btn_authenticate.setText(_tr("Cancel"))
+            self.set_auth_status(_tr("Starting authentication…"))
+        else:
+            if getattr(self, "_auth_state", None) == "authenticated":
+                self.btn_authenticate.setText(_tr("Continue"))
+            else:
+                self.btn_authenticate.setText(_tr("🔑   Validate ID"))
+            self.auth_status_lbl.hide()
+            self.auth_status_lbl.clear()
+
+    _AUTH_STATE_STYLES = {
+        "checking": ("Checking sign-in status…", "#757575", "#f0f0f0", "#e0e0e0"),
+        "none": ("Not signed in", "#b71c1c", "#fdecea", "#f5c6c2"),
+        "stored": (
+            "Credentials found — validate to finish",
+            "#8a5300",
+            "#fff4e0",
+            "#f0d9a8",
+        ),
+        "authenticated": ("Signed in & ready", "#1b5e20", "#e8f5e9", "#a5d6a7"),
+    }
+
+    def set_auth_state(self, state):
+        """
+        Update the auth-page status pill.
+
+        ``state`` is one of ``"checking"``, ``"none"``, ``"stored"``, or
+        ``"authenticated"``; unknown values fall back to ``"stored"``.
+        """
+        text, fg, bg, border = self._AUTH_STATE_STYLES.get(
+            state, self._AUTH_STATE_STYLES["stored"]
+        )
+        self._auth_state = state
+
+        if not getattr(self, "_auth_busy", False):
+            if state == "authenticated":
+                self.btn_authenticate.setText(_tr("Continue"))
+            elif state != "checking":
+                self.btn_authenticate.setText(_tr("🔑   Validate ID"))
+
+        self.auth_status_badge.setText(_tr(text).replace("&", "&&"))
+        self.auth_status_badge.setStyleSheet(
+            """
+            QPushButton {
+                background-color: transparent;
+                color: %s;
+                border: none;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 0 10px;
+                text-align: center;
+            }
+            """
+            % (fg,)
+        )
+
+    def set_auth_status(self, text, url=""):
+        """Show a non-blocking status line; if ``url`` is given, append a
+        link that reopens the browser sign-in page."""
+        if url:
+            text += '<br><a href="%s" style="color:#1b6b39;">%s</a>' % (
+                url,
+                _tr("Reopen the sign-in page"),
+            )
+        self.auth_status_lbl.setText(text)
+        self.auth_status_lbl.show()
 
     def pop_message(self, message, kind):
         """
@@ -378,7 +421,6 @@ class EasyDemDialog(QDialog):
         """
         QApplication.restoreOverrideCursor()
 
-        # Map semantic severity to QMessageBox configuration.
         config = {
             "info": (_tr("Information"), QMessageBox.Icon.Information),
             "warning": (_tr("Warning"), QMessageBox.Icon.Warning),

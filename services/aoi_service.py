@@ -18,36 +18,19 @@ from qgis.core import (
 )
 
 
-def _strip_z(coords):
-    """
-    Remove Z dimension from GeoJSON coordinates recursively.
-    Ensures compatibility with Earth Engine, which expects 2D coordinates.
+def _remove_z_dimension(coords):
 
-    Args:
-        coords: A coordinate or nested list of coordinates.
-
-    Returns:
-        Coordinate or nested list with only X and Y values.
-    """
     if isinstance(coords[0], (int, float)):
         return coords[:2]
-    return [_strip_z(c) for c in coords]
+    return [_remove_z_dimension(c) for c in coords]
 
 
 class AOIService:
     """Service for extracting and converting AOI geometries to Earth Engine objects."""
 
     @staticmethod
-    def _validate_layer(layer):
-        """
-        Validate that a layer is a polygon vector layer.
+    def _validate_vector_polygon_layer(layer):
 
-        Args:
-            layer: QgsMapLayer to validate.
-
-        Raises:
-            ValueError: If the layer is not a valid polygon vector layer.
-        """
         if not layer or layer.type() != QgsMapLayer.VectorLayer:
             raise ValueError("Layer must be a valid vector layer.")
 
@@ -56,40 +39,20 @@ class AOIService:
 
     @staticmethod
     def _get_layer_by_id(layer_id):
-        """
-        Retrieve and validate a layer from the current QGIS project by ID.
 
-        Args:
-            layer_id: String ID of the map layer.
-
-        Returns:
-            Validated QgsVectorLayer instance.
-
-        Raises:
-            ValueError: If the layer does not exist or is not a valid polygon vector layer.
-        """
         layer = QgsProject.instance().mapLayer(layer_id)
-        AOIService._validate_layer(layer)
+        AOIService._validate_vector_polygon_layer(layer)
+
         return layer
 
     @staticmethod
-    def _get_geometry(layer):
-        """
-        Get the dissolved geometry from a layer's selected or all features.
+    def _get_dissolved_geometry(layer, use_selected_features=True):
 
-        Uses selected features when a selection exists, otherwise uses all features.
-
-        Args:
-            layer: QgsVectorLayer to extract geometry from.
-
-        Returns:
-            QgsGeometry: Dissolved geometry of selected or all features.
-
-        Raises:
-            ValueError: If the layer contains no geometries.
-        """
-
-        features = layer.selectedFeatures() or list(layer.getFeatures())
+        features = (
+            layer.selectedFeatures()
+            if use_selected_features and layer.selectedFeatureCount() > 0
+            else list(layer.getFeatures())
+        )
         geometries = [f.geometry() for f in features]
 
         if not geometries:
@@ -98,24 +61,14 @@ class AOIService:
         return QgsGeometry.unaryUnion(geometries)
 
     @staticmethod
-    def _to_ee_feature_collection(layer):
+    def _layer_to_ee_feature_collection(layer, use_selected_features=True):
         """
-        Convert a QGIS layer's geometry to an Earth Engine FeatureCollection.
-        Ensures geometry is valid and compatible with Earth Engine requirements.
-        Reprojects to EPSG:4326 if necessary, strips Z coordinates, and wraps
-        the geometry in an ee.FeatureCollection.
+        Convert a QGIS layer's to an Earth Engine FeatureCollection, assuring
+        compatibility (2D and EPSG:4326)
 
-        Args:
-            layer: QgsVectorLayer to convert.
-
-        Returns:
-            Tuple of (ee.FeatureCollection, (min_x, min_y, max_x, max_y)) where
-            bbox is in EPSG:4326, computed locally from the QGIS geometry.
-
-        Raises:
-            ValueError: If the geometry is empty or cannot be exported to GeoJSON.
+        Returns a tuple of FeatureCollection and Bounding Box [min_x, min_y, max_x, max_y]
         """
-        geometry = AOIService._get_geometry(layer)
+        geometry = AOIService._get_dissolved_geometry(layer, use_selected_features)
 
         if geometry.isEmpty():
             raise ValueError("Empty geometry.")
@@ -131,8 +84,13 @@ class AOIService:
             )
             geometry.transform(transform)
 
-        rect = geometry.boundingBox()
-        bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
+        rectangle = geometry.boundingBox()
+        bbox = (
+            rectangle.xMinimum(),
+            rectangle.yMinimum(),
+            rectangle.xMaximum(),
+            rectangle.yMaximum(),
+        )
 
         geojson_str = geometry.asJson()
         if not geojson_str:
@@ -142,41 +100,18 @@ class AOIService:
             )
 
         geojson = json.loads(geojson_str)
-        geojson["coordinates"] = _strip_z(geojson["coordinates"])
+        geojson["coordinates"] = _remove_z_dimension(geojson["coordinates"])
 
         ee_geometry = ee.Geometry(geojson)
         return ee.FeatureCollection([ee.Feature(ee_geometry)]), bbox
 
     @staticmethod
-    def get_aoi_from_layer(layer):
-        """
-        Get an Earth Engine FeatureCollection AOI from a QGIS layer object.
+    def get_ee_feature_colection_from_layer(layer, use_selected_features=True):
 
-        Args:
-            layer: QgsVectorLayer to use as AOI source.
-
-        Returns:
-            Tuple of (ee.FeatureCollection, (min_x, min_y, max_x, max_y)).
-
-        Raises:
-            ValueError: If the layer or its geometry is invalid.
-        """
-        AOIService._validate_layer(layer)
-        return AOIService._to_ee_feature_collection(layer)
+        AOIService._validate_vector_polygon_layer(layer)
+        return AOIService._layer_to_ee_feature_collection(layer, use_selected_features)
 
     @staticmethod
-    def get_aoi_from_layer_id(layer_id):
-        """
-        Get an Earth Engine FeatureCollection AOI from a QGIS layer ID.
-
-        Args:
-            layer_id: String ID of the map layer in the current QGIS project.
-
-        Returns:
-            Tuple of (ee.FeatureCollection, (min_x, min_y, max_x, max_y)).
-
-        Raises:
-            ValueError: If the layer does not exist or its geometry is invalid.
-        """
+    def get_ee_feature_colection_from_layer_id(layer_id, use_selected_features=True):
         layer = AOIService._get_layer_by_id(layer_id)
-        return AOIService._to_ee_feature_collection(layer)
+        return AOIService._layer_to_ee_feature_collection(layer, use_selected_features)

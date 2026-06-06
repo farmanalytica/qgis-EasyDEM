@@ -1,11 +1,12 @@
-from qgis.core import QgsCoordinateReferenceSystem, QgsProject, QgsRasterLayer
+from qgis.core import QgsProject, QgsRasterLayer
 from qgis.utils import iface
 
-def hybrid_function():
-    """Add Google Hybrid XYZ layer to the project when not already present."""
+
+def add_google_hybrid_layer():
+
     existing_layers = QgsProject.instance().mapLayers().values()
     layer_names = [layer.name() for layer in existing_layers]
-    
+
     if "Google Hybrid" in layer_names:
         print("Google Hybrid layer already added.")
         return
@@ -18,7 +19,9 @@ def hybrid_function():
     provider_type = "wms"
 
     try:
-        google_hybrid_layer = QgsRasterLayer(google_hybrid_url, layer_name, provider_type)
+        google_hybrid_layer = QgsRasterLayer(
+            google_hybrid_url, layer_name, provider_type
+        )
 
         if not google_hybrid_layer.isValid():
             print("Failed to load {}. Invalid layer.".format(layer_name))
@@ -27,11 +30,11 @@ def hybrid_function():
         QgsProject.instance().addMapLayer(google_hybrid_layer, False)
 
         google_hybrid_layer.setOpacity(1)
-        
-        root = QgsProject.instance().layerTreeRoot()
-        root.insertLayer(-1, google_hybrid_layer)
+
+        layer_tree = QgsProject.instance().layerTreeRoot()
+        layer_tree.insertLayer(-1, google_hybrid_layer)
 
         iface.mapCanvas().refresh()
-        
+
     except Exception as exc:
         print("Error loading {}: {}".format(layer_name, exc))
