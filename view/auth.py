@@ -10,7 +10,6 @@ and authentication controls. Signal connections are wired externally by
 import os
 
 from qgis.PyQt.QtCore import Qt, QCoreApplication
-from qgis.PyQt.QtGui import QPixmap
 from qgis.PyQt.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -22,16 +21,12 @@ from qgis.PyQt.QtWidgets import (
 )
 from qgis.gui import QgsPasswordLineEdit
 
-from .styles import STYLE_BTN_PRIMARY
+from .styles import STYLE_BTN_PRIMARY, STYLE_BTN_SECONDARY
 
 
 def _tr(text):
     return QCoreApplication.translate("EasyDem", text)
 
-
-# ---------------------------------------------------------------------------
-# STEP 1 — Authentication
-# ---------------------------------------------------------------------------
 
 def setup_auth_page(dialog, page):
     """
@@ -58,7 +53,6 @@ def setup_auth_page(dialog, page):
     row.setContentsMargins(28, 0, 28, 0)
     row.setSpacing(34)
 
-    # ── Left column ───────────────────────────────────────────────────────
     left = QWidget()
     left.setFixedWidth(230)
     left.setStyleSheet("background: transparent;")
@@ -68,12 +62,10 @@ def setup_auth_page(dialog, page):
 
     left_lay.addStretch(1)
 
-    # Page title.
     title_lbl = QLabel(_tr("GEE Authentication"))
     title_lbl.setStyleSheet("color: #1a1a1a; font-size: 18px; font-weight: bold;")
     left_lay.addWidget(title_lbl)
 
-    # Short explanation of why authentication is required.
     desc_lbl = QLabel(
         _tr(
             "EasyDEM uses <b>Google Earth Engine</b> for processing. "
@@ -85,7 +77,6 @@ def setup_auth_page(dialog, page):
     desc_lbl.setStyleSheet("color: #616161; font-size: 13px;")
     left_lay.addWidget(desc_lbl)
 
-    # Info box — green left border highlights the prerequisite note.
     info_frame = QFrame()
     info_frame.setStyleSheet("""
         QFrame {
@@ -120,10 +111,9 @@ def setup_auth_page(dialog, page):
     row.addStretch(1)
     row.addWidget(left)
 
-    # ── Right card ────────────────────────────────────────────────────────
     card = QFrame()
     card.setFixedWidth(258)
-    card.setFixedHeight(218)
+    card.setFixedHeight(250)
     card.setStyleSheet("""
         QFrame {
             background-color: #ffffff;
@@ -136,7 +126,28 @@ def setup_auth_page(dialog, page):
     card_lay.setContentsMargins(20, 18, 20, 14)
     card_lay.setSpacing(7)
 
-    # Field label.
+    dialog.auth_status_badge = QPushButton(_tr("Checking sign-in status…"))
+    dialog.auth_status_badge.setCursor(Qt.CursorShape.PointingHandCursor)
+    dialog.auth_status_badge.setToolTip(
+        _tr("Click to re-check your Earth Engine sign-in status")
+    )
+    dialog.auth_status_badge.setFixedHeight(22)
+    dialog.auth_status_badge.setStyleSheet(
+        """
+        QPushButton {
+            background-color: transparent;
+            color: #757575;
+            border: none;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 0 10px;
+            text-align: center;
+        }
+        """
+    )
+    card_lay.addWidget(dialog.auth_status_badge)
+    card_lay.addSpacing(4)
+
     pid_lbl = QLabel(_tr("PROJECT ID (GOOGLE CLOUD)"))
     pid_lbl.setStyleSheet(
         "color: #9e9e9e; font-size: 11px; letter-spacing: 1px; font-weight: bold;"
@@ -144,7 +155,6 @@ def setup_auth_page(dialog, page):
     card_lay.addWidget(pid_lbl)
     card_lay.addSpacing(18)
 
-    # Project ID input — underline style with password-toggle via QGIS widget.
     dialog.project_id_input = QgsPasswordLineEdit()
     dialog.project_id_input.setEchoMode(QLineEdit.EchoMode.Normal)
     dialog.project_id_input.setPlaceholderText(_tr("e.g. my-geospatial-project-42"))
@@ -167,7 +177,6 @@ def setup_auth_page(dialog, page):
 
     card_lay.addSpacing(3)
 
-    # Primary action — validates the ID and initiates GEE authentication.
     dialog.btn_authenticate = QPushButton(_tr("🔑   Validate ID"))
     dialog.btn_authenticate.setFixedHeight(34)
     dialog.btn_authenticate.setStyleSheet(STYLE_BTN_PRIMARY)
@@ -175,7 +184,6 @@ def setup_auth_page(dialog, page):
 
     card_lay.addSpacing(2)
 
-    # Reset link — small and discrete; clears stored GEE credentials.
     dialog.btn_reset_auth = QPushButton(_tr("Reset authentication"))
     dialog.btn_reset_auth.setFixedHeight(20)
     dialog.btn_reset_auth.setStyleSheet("""
@@ -194,10 +202,91 @@ def setup_auth_page(dialog, page):
     row.addStretch(1)
     outer.addLayout(row)
 
-    # Hidden navigation hook used by the sidebar and controller to load
-    # datasets before showing the AOI page.
+    outer.addSpacing(6)
+    dialog.auth_status_lbl = QLabel("")
+    dialog.auth_status_lbl.setWordWrap(True)
+    dialog.auth_status_lbl.setTextFormat(Qt.TextFormat.RichText)
+    dialog.auth_status_lbl.setOpenExternalLinks(True)
+    dialog.auth_status_lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+    dialog.auth_status_lbl.setStyleSheet("color: #616161; font-size: 11px;")
+    dialog.auth_status_lbl.hide()
+    outer.addWidget(dialog.auth_status_lbl)
+
     dialog.btn_go_to_aoi = QPushButton(page)
     dialog.btn_go_to_aoi.hide()
-    dialog.btn_go_to_aoi.clicked.connect(dialog.show_aoi_page)
+    dialog.btn_go_to_aoi.clicked.connect(dialog.show_dem_page)
 
-    outer.addStretch(3)
+    outer.addStretch(2)
+
+    folder_frame = QFrame()
+    folder_frame.setFixedWidth(560)
+    folder_frame.setStyleSheet("""
+        QFrame {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        QLabel { background: transparent; border: none; }
+    """)
+    folder_lay = QHBoxLayout(folder_frame)
+    folder_lay.setContentsMargins(14, 8, 10, 8)
+    folder_lay.setSpacing(8)
+
+    folder_lbl = QLabel(_tr("Download folder"))
+    folder_lbl.setStyleSheet("color: #616161; font-size: 11px; font-weight: bold;")
+    folder_lay.addWidget(folder_lbl)
+
+    dialog.folder_input = QLineEdit()
+    dialog.folder_input.setReadOnly(True)
+    dialog.folder_input.setPlaceholderText(_tr("System temp (default)"))
+    dialog.folder_input.setFixedHeight(28)
+    dialog.folder_input.setStyleSheet("""
+        QLineEdit {
+            background-color: #f5f5f5;
+            color: #424242;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 12px;
+        }
+    """)
+    folder_lay.addWidget(dialog.folder_input, 1)
+
+    dialog.btn_clear_folder = QPushButton("✕")
+    dialog.btn_clear_folder.setFixedSize(28, 28)
+    dialog.btn_clear_folder.setToolTip(_tr("Clear download folder"))
+    dialog.btn_clear_folder.setStyleSheet("""
+        QPushButton {
+            background-color: transparent;
+            color: #bdbdbd;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        QPushButton:hover:enabled {
+            color: #c62828;
+            background-color: #fdecea;
+        }
+        QPushButton:disabled { color: #eeeeee; }
+    """)
+    folder_lay.addWidget(dialog.btn_clear_folder)
+
+    dialog.btn_browse_folder = QPushButton(_tr("Browse"))
+    dialog.btn_browse_folder.setFixedHeight(28)
+    dialog.btn_browse_folder.setStyleSheet(STYLE_BTN_SECONDARY)
+    folder_lay.addWidget(dialog.btn_browse_folder)
+
+    def _sync_clear_enabled(text):
+        dialog.btn_clear_folder.setEnabled(bool(text))
+
+    dialog.folder_input.textChanged.connect(_sync_clear_enabled)
+    _sync_clear_enabled(dialog.folder_input.text())
+
+    folder_outer_row = QHBoxLayout()
+    folder_outer_row.setContentsMargins(0, 0, 0, 0)
+    folder_outer_row.addStretch(1)
+    folder_outer_row.addWidget(folder_frame)
+    folder_outer_row.addStretch(1)
+    outer.addLayout(folder_outer_row)
+
+    outer.addSpacing(16)

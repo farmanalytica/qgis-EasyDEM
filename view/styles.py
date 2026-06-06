@@ -6,9 +6,6 @@ Stylesheet constants are defined here so individual page modules can reuse
 the same visual language without duplicating long Qt stylesheet strings.
 """
 
-# ---------------------------------------------------------------------------
-# Dialog base — light grey background, dark text, thin scrollbar
-# ---------------------------------------------------------------------------
 STYLE_DIALOG = """
 QDialog {
     background-color: #f5f5f5;
@@ -16,6 +13,12 @@ QDialog {
 }
 QWidget {
     color: #212121;
+}
+QToolTip {
+    background-color: #ffffff;
+    color: #212121;
+    border: 1px solid #c8d8ce;
+    padding: 4px 6px;
 }
 QLineEdit {
     background-color: #ffffff;
@@ -30,22 +33,32 @@ QLineEdit:focus {
 }
 QScrollBar:vertical {
     background: #f5f5f5;
-    width: 6px;
+    width: 12px;
     margin: 0;
 }
 QScrollBar::handle:vertical {
     background: #bdbdbd;
-    border-radius: 3px;
+    border-radius: 6px;
     min-height: 20px;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0;
 }
+QScrollBar:horizontal {
+    background: #f5f5f5;
+    height: 12px;
+    margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background: #bdbdbd;
+    border-radius: 6px;
+    min-width: 20px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
 """
 
-# ---------------------------------------------------------------------------
-# Primary button — solid green, used for the main call-to-action
-# ---------------------------------------------------------------------------
 STYLE_BTN_PRIMARY = """
 QPushButton {
     background-color: #1b6b39;
@@ -64,9 +77,6 @@ QPushButton:disabled {
 }
 """
 
-# ---------------------------------------------------------------------------
-# Secondary button — white with green border, used for navigation actions
-# ---------------------------------------------------------------------------
 STYLE_BTN_SECONDARY = """
 QPushButton {
     background-color: #ffffff;
@@ -90,11 +100,34 @@ QPushButton:disabled {
     color: #9e9e9e;
     border-color: #e0e0e0;
 }
+QToolTip {
+    background-color: #ffffff;
+    color: #212121;
+    border: 1px solid #c8d8ce;
+    padding: 4px 6px;
+}
 """
 
-# ---------------------------------------------------------------------------
-# AOI page — white panel card, field labels, combo boxes, metadata browser
-# ---------------------------------------------------------------------------
+STYLE_BTN_DRAW_ACTIVE = """
+QPushButton {
+    background-color: #e8833a;
+    color: #ffffff;
+    border: 1px solid #c96a26;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 0 12px;
+}
+QPushButton:hover  { background-color: #f0954f; }
+QPushButton:pressed { background-color: #d3742e; }
+QToolTip {
+    background-color: #ffffff;
+    color: #212121;
+    border: 1px solid #c8d8ce;
+    padding: 4px 6px;
+}
+"""
+
 STYLE_AOI_PAGE = """
 QWidget#aoiPage {
     background-color: #f5f5f5;
@@ -156,9 +189,27 @@ QTextBrowser#demInfo:focus {
 }
 """
 
-# ---------------------------------------------------------------------------
-# Help button — circular "?" in the dialog header
-# ---------------------------------------------------------------------------
+STYLE_CHECKBOX = """
+QCheckBox {
+    color: #212121;
+    font-size: 12px;
+    background: transparent;
+    spacing: 8px;
+}
+QCheckBox::indicator {
+    width: 15px;
+    height: 15px;
+}
+QCheckBox::indicator:unchecked {
+    background-color: #ffffff;
+    border: 1.5px solid #9e9e9e;
+    border-radius: 3px;
+}
+QCheckBox::indicator:unchecked:hover {
+    border-color: #1b6b39;
+}
+"""
+
 STYLE_BTN_HELP = """
 QPushButton {
     background-color: transparent;

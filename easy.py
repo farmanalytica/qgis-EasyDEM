@@ -22,21 +22,16 @@
  ***************************************************************************/
 """
 
-import re
 import os.path
 
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtCore import QCoreApplication, QTranslator
-from qgis.core import (
-    Qgis,
-    QgsProject,
-    QgsSettings,
-)
+from qgis.core import QgsSettings
 
 from .resources import *
 from .easy_dialog import EasyDemDialog
-from .services.settings_manager import SettingsManager
+from .managers.settings_manager import SettingsManager
 
 
 class EasyDem:
@@ -151,35 +146,54 @@ class EasyDem:
 
     def _finish_init(self):
         from .services.gee_service import GEEService
-        from .dem_handler import DEMHandler
+        from .controllers.dem_ctrl import DEMCtrl
+        from .controllers.auth_ctrl import AuthCtrl
 
         self._services_ready = True
         self.gee_service = GEEService()
-        self.dem_handler = DEMHandler(self.dlg, self.gee_service, self.interface)
+        self.dem_ctrl = DEMCtrl(self.dialog, self.gee_service, self.interface)
+        self.auth_ctrl = AuthCtrl(self.dialog, self.gee_service)
 
         saved_project_id = self.gee_service.get_saved_project_id()
         if saved_project_id:
-            self.dlg.project_id_input.setText(saved_project_id)
-
-        self.dlg.project_id_input.textChanged.connect(self.gee_service.save_project_id)
-        self.dlg.btn_authenticate.clicked.connect(self.handle_authentication)
-        self.dlg.btn_reset_auth.clicked.connect(self.handle_reset_authentication)
-        self.dlg.btn_download_dem.clicked.connect(
-            lambda: self.dem_handler.handle_dem_service(self.interface)
-        )
-        self.dlg.layer_combo.activated.connect(self.dem_handler.handle_layer_activated)
-        self.dlg.dem_combo.currentIndexChanged.connect(
-            self.dem_handler.on_dataset_changed
-        )
-        self.dlg.btn_go_to_aoi.clicked.connect(self.dem_handler.load_available_datasets)
-        self.dlg.btn_browse_folder.clicked.connect(
-            self.dem_handler.handle_folder_selection
-        )
-        self.dlg.btn_hybrid_layer.clicked.connect(self.dem_handler.handle_hybrid_layer)
+            self.dialog.project_id_input.setText(saved_project_id)
 
         saved_folder = SettingsManager.load_download_folder()
         if saved_folder:
-            self.dlg.folder_input.setText(saved_folder)
+            self.dialog.folder_input.setText(saved_folder)
+
+        self.dialog.project_id_input.textChanged.connect(
+            self.gee_service.save_project_id
+        )
+        self.dialog.project_id_input.textChanged.connect(
+            self.auth_ctrl.on_project_id_changed
+        )
+        self.dialog.btn_authenticate.clicked.connect(
+            self.auth_ctrl.handle_authentication
+        )
+        self.dialog.btn_reset_auth.clicked.connect(
+            self.auth_ctrl.handle_reset_authentication
+        )
+        self.dialog.auth_status_badge.clicked.connect(
+            self.auth_ctrl.refresh_auth_status
+        )
+        self.dialog.btn_browse_folder.clicked.connect(
+            self.auth_ctrl.handle_folder_selection
+        )
+        self.dialog.btn_clear_folder.clicked.connect(self.auth_ctrl.handle_clear_folder)
+        self.dialog.btn_go_to_aoi.clicked.connect(self.dem_ctrl.load_available_datasets)
+
+        self.dialog.layer_combo.layerChanged.connect(self.dem_ctrl.handle_layer_changed)
+        self.dialog.dem_combo.currentIndexChanged.connect(
+            self.dem_ctrl.on_dataset_changed
+        )
+        self.dialog.btn_download_dem.clicked.connect(
+            lambda: self.dem_ctrl.handle_dem_service(self.interface)
+        )
+        self.dialog.btn_hybrid_layer.clicked.connect(self.dem_ctrl.handle_hybrid_layer)
+        self.dialog.btn_draw_aoi.clicked.connect(self.dem_ctrl.handle_draw_aoi)
+
+        self.auth_ctrl.refresh_auth_status()
 
     def _on_extlibs_ready(self, success, error_msg):
         self._waiting_for_extlibs = False
@@ -188,9 +202,9 @@ class EasyDem:
 
             extlibs_manager.ensure_on_path()
             self._finish_init()
-            self.dlg.show_auth_page()
+            self.dialog.show_auth_page()
         else:
-            self.dlg.pop_message(
+            self.dialog.pop_message(
                 self.tr("Failed to download dependencies: %s") % error_msg,
                 "warning",
             )
@@ -201,61 +215,19 @@ class EasyDem:
 
         if self.first_start:
             self.first_start = False
-            self.dlg = EasyDemDialog(self.interface.mainWindow())
+            self.dialog = EasyDemDialog(self.interface.mainWindow())
 
         if not self._services_ready:
             if extlibs_manager.is_ready():
                 extlibs_manager.ensure_on_path()
                 self._finish_init()
             else:
-                self.dlg.show_loading_page()
+                self.dialog.show_loading_page()
                 downloader = extlibs_manager.get_downloader()
                 if downloader and not self._waiting_for_extlibs:
                     self._waiting_for_extlibs = True
                     downloader.download_done.connect(self._on_extlibs_ready)
 
-        self.dlg.show()
-        result = self.dlg.exec() if hasattr(self.dlg, "exec") else self.dlg.exec_()
-        if result:
-            pass
-
-    def handle_authentication(self):
-        """
-        Handle Google Earth Engine authentication flow.
-
-        Validates project ID and performs authentication, displaying
-        appropriate messages on success or failure.
-        """
-        project_id = self.dlg.project_id_input.text()
-        if not project_id:
-            self.dlg.pop_message(self.tr("Missing Project ID."), "warning")
-            return
-
-        project_id_pattern = r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
-
-        if not re.match(project_id_pattern, project_id):
-            self.dlg.pop_message(self.tr("Invalid Project ID."), "warning")
-            return
-
-        try:
-            self.gee_service.authenticate(project_id)
-            self.dlg.show_aoi_page()
-            self.dlg.pop_message(self.tr("Authentication successful!"), "info")
-
-            layer = self.dlg.layer_combo.currentLayer()
-            if layer:
-                self.dem_handler.handle_layer_changed(layer)
-            else:
-                self.dem_handler.load_available_datasets()
-
-        except Exception as e:
-            self.dlg.pop_message(str(e), "warning")
-
-    def handle_reset_authentication(self):
-        """Reset Google Earth Engine authentication credentials."""
-        try:
-            msg = self.gee_service.reset_authentication()
-            if msg:
-                self.dlg.pop_message(msg, "info")
-        except (FileNotFoundError, RuntimeError, OSError) as e:
-            self.dlg.pop_message(str(e), "warning")
+        self.dialog.show()
+        self.dialog.raise_()
+        self.dialog.activateWindow()

@@ -17,7 +17,7 @@ except AttributeError:
 
     WAIT_CURSOR = Qt.WaitCursor
 
-from .dem_registry import DEMRegistry
+from ..services.dem_registry import DEMRegistry
 
 
 class DatasetManager:
@@ -27,16 +27,6 @@ class DatasetManager:
     def load_available_datasets(
         dem_combo, current_aoi, current_aoi_bbox, on_error=None
     ):
-        """
-        Load available datasets in the combobox based on current AOI.
-
-        Args:
-            dem_combo: The QComboBox widget to populate.
-            current_aoi: The current Area of Interest geometry.
-            current_aoi_bbox: The bounding box of the current AOI.
-            on_error: Optional callback to handle errors.
-
-        """
         registry = DEMRegistry()
         dem_combo.clear()
 
@@ -51,7 +41,7 @@ class DatasetManager:
 
             for dataset in registry.list_datasets():
                 QApplication.processEvents()
-                if registry.is_available(
+                if registry.has_coverage(
                     dataset.name, geometry, aoi_bbox=current_aoi_bbox
                 ):
                     dem_combo.addItem(dataset.name, dataset.name)
@@ -65,13 +55,7 @@ class DatasetManager:
 
     @staticmethod
     def update_dataset_info(dem_combo, dem_info_widget):
-        """
-        Update the dataset info panel when the selected dataset changes.
 
-        Args:
-            dem_combo: The QComboBox containing dataset selections.
-            dem_info_widget: The QTextBrowser widget to display info in.
-        """
         dataset_name = dem_combo.currentData()
         if not dataset_name:
             dem_info_widget.clear()
