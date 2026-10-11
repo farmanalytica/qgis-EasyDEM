@@ -1,5 +1,10 @@
 # EasyDEM
 
+> **Superseded by [farm_tools](https://github.com/farmanalytica/farm_tools).**
+> This plugin's codebase has been unified into farm_tools, where its DEM
+> download/visualization functionality is maintained as the **EasyDEM** module.
+> This repository is kept for historical reference and is no longer updated.
+
 EasyDEM is a QGIS plugin that lets GIS analysts download and visualise Digital
 Elevation Models (DEMs) directly inside QGIS, without leaving the desktop
 environment.  Datasets are fetched on-demand from **Google Earth Engine** (GEE)
